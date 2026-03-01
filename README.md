@@ -3,9 +3,10 @@
 `pyaeron` is an idiomatic Python wrapper around the Aeron C client (`libaeron`).
 
 ## Status
-Phase 1 bootstrap is complete:
+Phase 2 foundation is complete:
 - project packaging and tooling are configured
 - package/module skeleton is in place
+- `cffi`-based Aeron C API loader and MVP symbol bindings are implemented
 - lint, type checking, unit tests, and integration-smoke CI are wired
 
 Core Aeron functionality is implemented in later phases.
@@ -26,4 +27,3 @@ make check
 ## Planning Docs
 - Implementation tracker: `IMPLEMENTATION_PLAN.md`
 - API contract: `docs/api-contract.md`
-

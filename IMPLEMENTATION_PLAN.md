@@ -1,7 +1,7 @@
 # pyaeron Implementation Plan
 
 Last updated: 2026-03-01
-Status: Phase 1 complete
+Status: Phase 2 complete
 
 ## Purpose
 Create an idiomatic Python wrapper for the Aeron C client (`libaeron`) with a stable, Python-first API, strong lifecycle management, robust error handling, and production-ready tests.
@@ -52,7 +52,7 @@ Create an idiomatic Python wrapper for the Aeron C client (`libaeron`) with a st
 | --- | --- | --- | --- |
 | 0 | Discovery + API Contract | Completed | Public API contract document accepted |
 | 1 | Project Bootstrap | Completed | Package skeleton + CI + lint/test commands working |
-| 2 | FFI Foundation | Not Started | `libaeron` load + core symbols callable |
+| 2 | FFI Foundation | Completed | `libaeron` load + core symbols callable |
 | 3 | Error Model | Not Started | Negative returns map to typed exceptions |
 | 4 | Core Lifecycle API | Not Started | `Context` + `Client` lifecycle stable |
 | 5 | Pub/Sub API MVP | Not Started | Publish and receive one message in tests |
@@ -98,24 +98,24 @@ Exit criteria:
 Objective: Implement private C FFI layer and dynamic library loading.
 
 Tasks:
-- [ ] Implement `_capi.py` with:
-- [ ] Library discovery (`AERON_LIBRARY_PATH`, standard names, helpful error text).
-- [ ] Core type aliases and function signatures for MVP.
-- [ ] Constants for publication return codes and key enums.
-- [ ] Safe string conversion helpers for C strings.
-- [ ] Add smoke tests validating symbol availability.
-- [ ] Add `scripts/build_aeron.sh` for local build from `../aeron`.
+- [x] Implement `_capi.py` with:
+- [x] Library discovery (`AERON_LIBRARY_PATH`, standard names, helpful error text).
+- [x] Core type aliases and function signatures for MVP.
+- [x] Constants for publication return codes and key enums.
+- [x] Safe string conversion helpers for C strings.
+- [x] Add smoke tests validating symbol availability.
+- [x] Add `scripts/build_aeron.sh` for local build from `../aeron`.
 
 MVP symbols:
-- [ ] Context: init/close + core setters/getters.
-- [ ] Client: init/start/close/is_closed/main_do_work.
-- [ ] Async add: publication/subscription + poll.
-- [ ] Data path: publication_offer + subscription_poll.
-- [ ] Error path: aeron_errcode/aeron_errmsg.
+- [x] Context: init/close + core setters/getters.
+- [x] Client: init/start/close/is_closed/main_do_work.
+- [x] Async add: publication/subscription + poll.
+- [x] Data path: publication_offer + subscription_poll.
+- [x] Error path: aeron_errcode/aeron_errmsg.
 
 Exit criteria:
-- [ ] Core symbols callable from Python.
-- [ ] Library load failures are actionable.
+- [x] Core symbols callable from Python.
+- [x] Library load failures are actionable.
 
 ## Phase 3: Error Model
 Objective: Build a Python-native exception hierarchy and centralized result checking.
@@ -279,8 +279,11 @@ Use this section for implementation updates.
 - 2026-03-01: Completed Phase 0. Added `docs/api-contract.md` with accepted v0.1 API contract and explicit deferred decisions.
 - 2026-03-01: Completed Phase 1 bootstrap. Added packaging, tooling, package skeleton, CI workflow, and smoke tests.
 - 2026-03-01: Verified locally in `.venv` with `make check` (ruff + mypy + unit tests + integration-smoke tests).
+- 2026-03-01: Completed Phase 2 FFI foundation. Replaced placeholder loader with `cffi` MVP bindings in `_capi.py`.
+- 2026-03-01: Added Phase 2 smoke tests (`tests/unit/test_capi.py`, `tests/integration/test_capi_symbol_smoke.py`).
+- 2026-03-01: Verified locally in `.venv` with `make check`; integration symbol smoke skipped when `libaeron` is unavailable.
 
 ## Immediate Next Steps
 - [x] Execute Phase 0 and produce `docs/api-contract.md`.
 - [x] Finalize tooling stack in Phase 1.
-- [ ] Start Phase 2 FFI skeleton with a minimal callable symbol set.
+- [x] Start Phase 2 FFI skeleton with a minimal callable symbol set.
