@@ -20,7 +20,6 @@ test:
 	pytest -m "not integration"
 
 test-integration:
-	pytest -m integration tests/integration/test_phase1_integration_smoke.py
+	pytest -m integration tests/integration
 
 check: lint typecheck test test-integration
-
