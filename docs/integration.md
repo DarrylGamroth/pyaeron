@@ -1,34 +1,41 @@
 # Integration Test Strategy
 
-This project uses a deterministic integration harness for Aeron runtime tests.
+This project uses deterministic integration tests against a real Aeron media driver.
 
-## Media Driver Harness
-- Integration tests launch a dedicated `aeronmd` process per test function.
-- Each run uses a unique temporary `AERON_DIR` so tests are isolated.
-- The harness waits for `cnc.dat` before yielding control to tests.
-- Teardown always terminates the process (and escalates to kill if needed).
-
-Implementation:
-- `tests/integration/conftest.py`
-- `tests/integration/support.py`
+## Driver Modes in Tests
+`tests/integration/conftest.py` supports two execution modes:
+- External driver mode: set `AERON_EXTERNAL_MEDIA_DRIVER_DIR` to a directory containing `cnc.dat`.
+  - In this mode, tests use the existing running driver and do not launch `aeronmd`.
+- Managed driver mode: if `AERON_EXTERNAL_MEDIA_DRIVER_DIR` is not set, tests launch `aeronmd`.
 
 ## Runtime Discovery
-- `AERON_LIBRARY_PATH` can be supplied explicitly.
-- `AERON_MD_BINARY` can point to a specific `aeronmd` executable.
-- Defaults support `/opt/aeron/lib/libaeron.so` and `/opt/aeron/bin/aeronmd`.
+- `AERON_LIBRARY_PATH` can point to a specific `libaeron` path.
+- `AERON_DRIVER_LIBRARY_PATH` can point to a specific `libaeron_driver` path.
+- `AERON_MD_BINARY` can point to a specific `aeronmd` executable for managed-driver mode.
+- Local defaults include `/opt/aeron/lib/libaeron.so` and `/opt/aeron/lib/libaeron_driver.so`.
 
 ## Matrix Coverage
 `tests/integration/test_pubsub_matrix.py` covers:
 - IPC and UDP channels
 - invoker mode off/on
 - multi-message publish/poll validation
-- retry/backpressure-style behavior checks (`offer_with_retry` timeout path)
+- retry-path behavior checks (`offer_with_retry`)
 
-## CI Lanes
-- Fast lane (PR/push): lint, typecheck, unit tests, and non-extended integration tests.
-- Extended lane (schedule/workflow_dispatch): integration matrix tests marked `integration_extended`.
+Additional integration coverage includes:
+- embedded media driver roundtrip (`test_embedded_driver.py`)
+- advanced APIs (`test_phase8_advanced.py`)
 
-Make targets:
+## CI Strategy
+- PR/push lane:
+  - lint, typecheck, unit tests
+  - integration tests on Linux and Windows
+- Scheduled/manual lane:
+  - extended integration matrix
+
+CI launches a Java media driver (`io.aeron.driver.MediaDriver`) and points tests at it via
+`AERON_EXTERNAL_MEDIA_DRIVER_DIR`.
+
+## Make Targets
+- `make test-integration`
 - `make test-integration-fast`
 - `make test-integration-extended`
-

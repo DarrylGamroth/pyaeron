@@ -4,7 +4,7 @@ Release date: 2026-03-02
 Tag: `v0.1.0`
 
 ## Highlights
-- Complete idiomatic Python lifecycle API around Aeron C client.
+- Complete Python lifecycle API around Aeron C client.
 - Stable pub/sub wrappers with timeout and retry ergonomics.
 - Advanced feature coverage including exclusive publications, buffer claims, counters, images, and CnC helpers.
 - Deterministic integration test matrix for IPC/UDP and invoker/non-invoker modes.
@@ -18,3 +18,5 @@ Release artifacts are built as:
 ## Compatibility
 - Python `>=3.10`
 - Requires compatible `libaeron` installed on host system.
+
+For newer changes after `0.1.0`, see `CHANGELOG.md`.

@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "pyaeron"
 version = "0.1.0"
-description = "Idiomatic Python wrapper for the Aeron C client"
+description = "Python wrapper for the Aeron C client and embedded media driver"
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "Apache-2.0" }

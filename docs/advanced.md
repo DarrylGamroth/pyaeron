@@ -1,6 +1,6 @@
-# Advanced Features (Phase 8)
+# Advanced Features
 
-Phase 8 adds higher-level wrappers around advanced Aeron C client APIs.
+`pyaeron` includes wrappers for advanced Aeron APIs beyond basic pub/sub.
 
 ## Exclusive Publications
 - `Client.add_exclusive_publication(channel, stream_id, ...) -> ExclusivePublication`
@@ -13,7 +13,7 @@ Phase 8 adds higher-level wrappers around advanced Aeron C client APIs.
 - `Publication.try_claim(length) -> BufferClaim`
 - `BufferClaim.write(payload, offset=0)`
 - `BufferClaim.commit()` and `BufferClaim.abort()`
-- Context manager semantics: commit on success, abort on exception.
+- Context-manager semantics: commit on success, abort on exception.
 
 ## Destination Management
 Available on:
@@ -21,8 +21,9 @@ Available on:
 - `ExclusivePublication`
 - `Subscription`
 
-All expose `add_destination(uri, timeout=..., poll_interval=...)` and
-`remove_destination(uri, timeout=..., poll_interval=...)`.
+All expose:
+- `add_destination(uri, timeout=..., poll_interval=...)`
+- `remove_destination(uri, timeout=..., poll_interval=...)`
 
 ## Counters
 - `Client.add_counter(type_id=..., label=..., key=...) -> Counter`

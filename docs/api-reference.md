@@ -1,6 +1,6 @@
 # API Reference
 
-This document lists the public `pyaeron` API as of `0.1.0`.
+This document lists the public `pyaeron` API as of `0.1.0` plus current unreleased updates.
 
 ## Core Lifecycle
 
@@ -52,6 +52,7 @@ This document lists the public `pyaeron` API as of `0.1.0`.
 - `MediaDriver.launch_embedded(...) -> MediaDriver`
 - `MediaDriver.close() -> None`
 - `MediaDriver.is_open -> bool`
+- `MediaDriver.manual_main_loop -> bool`
 - `MediaDriver.aeron_dir -> str | None`
 - `MediaDriver.context -> MediaDriverContext`
 - `MediaDriver.do_work() -> int`
@@ -146,8 +147,15 @@ Common typed errors:
 - `LibraryLoadError`
 - `UnsupportedAeronVersionError`
 - `AeronStateError`
+- `AeronArgumentError`
 - `ResourceClosedError`
+- `IllegalStateError`
+- `AeronIOError`
 - `TimedOutError`
+- `DriverTimeoutError`
+- `ClientTimeoutError`
+- `ConductorServiceTimeoutError`
+- `BufferFullError`
 - `NotConnectedError`
 - `BackPressuredError`
 - `AdminActionError`

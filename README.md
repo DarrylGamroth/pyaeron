@@ -1,22 +1,22 @@
 # pyaeron
 
-`pyaeron` is an idiomatic Python wrapper around the Aeron C client (`libaeron`).
+`pyaeron` is a Python wrapper for the Aeron C libraries.
+
+It provides high-level APIs for:
+- Aeron client lifecycle (`libaeron`)
+- pub/sub messaging
+- counters, images, and CnC inspection
+- embedded media driver control (`libaeron_driver`)
 
 ## Status
 Current version: `0.1.0`
 
-Implemented:
-- Context and client lifecycle wrappers (`Context`, `Client`)
-- Embedded media driver wrappers (`MediaDriverContext`, `MediaDriver`)
-- Publication/subscription APIs (`Publication`, `Subscription`)
-- Callback ergonomics (`FragmentCallbackAdapter`, `Subscription.poll_until`)
-- Advanced APIs: `ExclusivePublication`, `BufferClaim`, destination add/remove, counters, image metadata, and CnC access
-- Unit and integration test coverage (IPC + UDP, invoker on/off)
-
 ## Requirements
 - Python `>=3.10`
-- A compatible `libaeron` already installed on the target machine
-- Aeron Media Driver (`aeronmd`) running for publish/subscribe flows
+- `libaeron` installed and discoverable on the host
+- For pub/sub flows, either:
+  - an external media driver running (`aeronmd` or Java `MediaDriver`), or
+  - embedded driver mode using `MediaDriver` (`libaeron_driver` required)
 
 ## Installation
 From PyPI:
@@ -41,10 +41,11 @@ python -m pip install -e ".[dev]"
 ```
 
 ## Library Discovery
-`pyaeron` tries to load Aeron in this order:
+### Client library (`libaeron`)
+Load order:
 1. `AERON_LIBRARY_PATH`
-2. System loader resolution (`find_library`)
-3. Common library names (`libaeron.so`, `libaeron.dylib`, `aeron.dll`)
+2. system loader resolution (`find_library`)
+3. common names (`libaeron.so`, `libaeron.dylib`, `aeron.dll`)
 
 Linux example:
 
@@ -58,7 +59,26 @@ Windows PowerShell example:
 $env:AERON_LIBRARY_PATH = "C:\\aeron\\lib\\aeron.dll"
 ```
 
+### Embedded driver library (`libaeron_driver`)
+Load order:
+1. `AERON_DRIVER_LIBRARY_PATH`
+2. system loader resolution (`find_library`)
+3. common names (`libaeron_driver.so`, `libaeron_driver.dylib`, `aeron_driver.dll`)
+
+Linux example:
+
+```bash
+export AERON_DRIVER_LIBRARY_PATH=/opt/aeron/lib/libaeron_driver.so
+```
+
+Windows PowerShell example:
+
+```powershell
+$env:AERON_DRIVER_LIBRARY_PATH = "C:\\aeron\\lib\\aeron_driver.dll"
+```
+
 ## Quick Start
+### External driver mode
 Publisher:
 
 ```python
@@ -98,13 +118,29 @@ with Context() as ctx:
             sub.close()
 ```
 
+### Embedded driver mode
+
+```python
+from pyaeron import Client, Context, MediaDriver
+
+with MediaDriver.launch_embedded() as driver:
+    with Context(aeron_dir=driver.aeron_dir) as ctx:
+        with Client(ctx) as client:
+            pub = client.add_publication("aeron:ipc", 1001)
+            sub = client.add_subscription("aeron:ipc", 1001)
+            try:
+                pub.offer_with_retry(b"embedded")
+                sub.poll_until(lambda f, h: print(bytes(f)), min_fragments=1, timeout=5.0)
+            finally:
+                pub.close()
+                sub.close()
+```
+
 ## Examples
 Runnable examples are in `examples/`:
 - `examples/basic_publisher.py`
 - `examples/basic_subscriber.py`
 - `examples/invoker_mode_pubsub.py`
-- `examples/try_claim_publisher.py`
-- `examples/counters_demo.py`
 - `examples/try_claim_publisher.py`
 - `examples/counters_demo.py`
 
@@ -126,8 +162,9 @@ make generate-cdef
 Default header path is `../aeron/aeron-client/src/main/c/aeronc.h`.
 
 ## Documentation
-- API contract: `docs/api-contract.md`
+- Docs index: `docs/README.md`
 - API reference: `docs/api-reference.md`
+- API contract: `docs/api-contract.md`
 - Callback notes: `docs/callbacks.md`
 - Integration strategy: `docs/integration.md`
 - Advanced features: `docs/advanced.md`
