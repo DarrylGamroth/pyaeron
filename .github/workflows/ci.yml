@@ -5,6 +5,9 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
+  schedule:
+    - cron: "0 6 * * *"
 
 jobs:
   lint-type-test:
@@ -39,5 +42,30 @@ jobs:
 
       - name: Integration smoke
         if: matrix.python-version == '3.12'
-        run: make test-integration
+        env:
+          AERON_LIBRARY_PATH: /opt/aeron/lib/libaeron.so
+          AERON_MD_BINARY: /opt/aeron/bin/aeronmd
+        run: make test-integration-fast
 
+  integration-extended:
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install -U pip
+          python -m pip install -e ".[dev]"
+
+      - name: Extended integration matrix
+        env:
+          AERON_LIBRARY_PATH: /opt/aeron/lib/libaeron.so
+          AERON_MD_BINARY: /opt/aeron/bin/aeronmd
+        run: make test-integration-extended

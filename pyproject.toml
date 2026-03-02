@@ -32,6 +32,7 @@ addopts = "-ra"
 testpaths = ["tests"]
 markers = [
   "integration: tests requiring integration-style execution",
+  "integration_extended: extended integration matrix tests",
 ]
 
 [tool.ruff]
@@ -55,4 +56,3 @@ strict_equality = true
 show_error_codes = true
 pretty = true
 files = ["pyaeron"]
-
