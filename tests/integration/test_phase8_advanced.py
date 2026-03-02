@@ -73,6 +73,43 @@ def test_counter_and_counters_reader(client_factory) -> None:
 
 @pytest.mark.integration
 @pytest.mark.integration_extended
+def test_try_claim_with_counter_tracking(client_factory) -> None:
+    ctx, client = client_factory(invoker=False)
+    sub = client.add_subscription("aeron:ipc", 6105, timeout=3.0)
+    pub = client.add_publication("aeron:ipc", 6105, timeout=3.0)
+    counter = client.add_counter(type_id=102, label="phase8-try-claim-counter", timeout=3.0)
+
+    try:
+        _await_connected(client, pub, sub, invoker=False)
+
+        constants = counter.constants
+        reader = client.counters_reader
+
+        expected = [f"claim-{i}".encode() for i in range(4)]
+        for i, payload in enumerate(expected, start=1):
+            with pub.try_claim(len(payload)) as claim:
+                claim.write(payload)
+            counter.value = i
+
+        received: list[bytes] = []
+
+        def on_fragment(fragment: memoryview, _header) -> None:
+            received.append(bytes(fragment))
+
+        sub.poll_until(on_fragment, min_fragments=len(expected), timeout=8.0, copy_payload=True)
+        assert received == expected
+        assert counter.value == len(expected)
+        assert reader.value(constants.counter_id) == len(expected)
+    finally:
+        counter.close()
+        pub.close()
+        sub.close()
+        client.close()
+        ctx.close()
+
+
+@pytest.mark.integration
+@pytest.mark.integration_extended
 def test_subscription_image_metadata(client_factory) -> None:
     ctx, client = client_factory(invoker=False)
     sub = client.add_subscription("aeron:ipc", 6102, timeout=3.0)

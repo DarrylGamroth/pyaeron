@@ -102,6 +102,8 @@ Runnable examples are in `examples/`:
 - `examples/basic_publisher.py`
 - `examples/basic_subscriber.py`
 - `examples/invoker_mode_pubsub.py`
+- `examples/try_claim_publisher.py`
+- `examples/counters_demo.py`
 
 ## Development Commands
 ```bash
