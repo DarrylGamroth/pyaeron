@@ -41,6 +41,11 @@ typedef struct aeron_subscription_stct aeron_subscription_t;
 typedef struct aeron_header_stct aeron_header_t;
 typedef struct aeron_client_registering_resource_stct aeron_async_add_publication_t;
 typedef struct aeron_client_registering_resource_stct aeron_async_add_subscription_t;
+typedef struct aeron_header_values_stct
+{
+    uint8_t data[44];
+}
+aeron_header_values_t;
 
 typedef int64_t (*aeron_reserved_value_supplier_t)(
     void *clientd, uint8_t *buffer, size_t frame_length);
@@ -103,12 +108,21 @@ int64_t aeron_publication_offer(
     size_t length,
     aeron_reserved_value_supplier_t reserved_value_supplier,
     void *clientd);
+bool aeron_publication_is_closed(aeron_publication_t *publication);
+bool aeron_publication_is_connected(aeron_publication_t *publication);
+int aeron_publication_close(aeron_publication_t *publication, void *handler, void *clientd);
 
 int aeron_subscription_poll(
     aeron_subscription_t *subscription,
     aeron_fragment_handler_t handler,
     void *clientd,
     size_t fragment_limit);
+bool aeron_subscription_is_closed(aeron_subscription_t *subscription);
+bool aeron_subscription_is_connected(aeron_subscription_t *subscription);
+int aeron_subscription_close(aeron_subscription_t *subscription, void *handler, void *clientd);
+
+int aeron_header_values(aeron_header_t *header, aeron_header_values_t *values);
+int64_t aeron_header_position(aeron_header_t *header);
 
 int aeron_errcode(void);
 const char *aeron_errmsg(void);
@@ -129,7 +143,15 @@ _REQUIRED_SYMBOLS = (
     "aeron_async_add_subscription",
     "aeron_async_add_subscription_poll",
     "aeron_publication_offer",
+    "aeron_publication_is_closed",
+    "aeron_publication_is_connected",
+    "aeron_publication_close",
     "aeron_subscription_poll",
+    "aeron_subscription_is_closed",
+    "aeron_subscription_is_connected",
+    "aeron_subscription_close",
+    "aeron_header_values",
+    "aeron_header_position",
     "aeron_errcode",
     "aeron_errmsg",
 )

@@ -1,10 +1,11 @@
 from __future__ import annotations
 
+import time
 from types import TracebackType
 from typing import Any
 
 from .context import Context
-from .errors import check_rc
+from .errors import TimedOutError, check_rc
 from .publication import Publication
 from .subscription import Subscription
 from .util import ensure_open
@@ -90,8 +91,38 @@ class Client:
         poll_interval: float = 0.001,
     ) -> Publication:
         ensure_open(self._closed, "Client")
-        del timeout, poll_interval
-        return Publication(channel=channel, stream_id=stream_id)
+        async_ptr = self._capi.ffi.new("aeron_async_add_publication_t **")
+        check_rc(
+            self._capi.lib.aeron_async_add_publication(
+                async_ptr,
+                self._ptr,
+                self._capi.c_string(channel),
+                stream_id,
+            ),
+            capi=self._capi,
+        )
+
+        deadline = None if timeout is None else time.monotonic() + timeout
+        publication_ptr = self._capi.ffi.new("aeron_publication_t **")
+        while True:
+            check_rc(
+                self._capi.lib.aeron_async_add_publication_poll(publication_ptr, async_ptr[0]),
+                capi=self._capi,
+            )
+            if publication_ptr[0] != self._capi.ffi.NULL:
+                return Publication(
+                    capi=self._capi,
+                    ptr=publication_ptr[0],
+                    channel=channel,
+                    stream_id=stream_id,
+                )
+
+            if deadline is not None and time.monotonic() >= deadline:
+                raise TimedOutError(
+                    f"Timed out waiting for publication: channel={channel!r}, stream_id={stream_id}"
+                )
+
+            self._wait_iteration(poll_interval)
 
     def add_subscription(
         self,
@@ -102,5 +133,46 @@ class Client:
         poll_interval: float = 0.001,
     ) -> Subscription:
         ensure_open(self._closed, "Client")
-        del timeout, poll_interval
-        return Subscription(channel=channel, stream_id=stream_id)
+        async_ptr = self._capi.ffi.new("aeron_async_add_subscription_t **")
+        check_rc(
+            self._capi.lib.aeron_async_add_subscription(
+                async_ptr,
+                self._ptr,
+                self._capi.c_string(channel),
+                stream_id,
+                self._capi.ffi.NULL,
+                self._capi.ffi.NULL,
+                self._capi.ffi.NULL,
+                self._capi.ffi.NULL,
+            ),
+            capi=self._capi,
+        )
+
+        deadline = None if timeout is None else time.monotonic() + timeout
+        subscription_ptr = self._capi.ffi.new("aeron_subscription_t **")
+        while True:
+            check_rc(
+                self._capi.lib.aeron_async_add_subscription_poll(subscription_ptr, async_ptr[0]),
+                capi=self._capi,
+            )
+            if subscription_ptr[0] != self._capi.ffi.NULL:
+                return Subscription(
+                    capi=self._capi,
+                    ptr=subscription_ptr[0],
+                    channel=channel,
+                    stream_id=stream_id,
+                )
+
+            if deadline is not None and time.monotonic() >= deadline:
+                raise TimedOutError(
+                    "Timed out waiting for subscription: "
+                    f"channel={channel!r}, stream_id={stream_id}"
+                )
+
+            self._wait_iteration(poll_interval)
+
+    def _wait_iteration(self, poll_interval: float) -> None:
+        if self._context.use_conductor_agent_invoker:
+            self.do_work()
+        if poll_interval > 0:
+            time.sleep(poll_interval)
