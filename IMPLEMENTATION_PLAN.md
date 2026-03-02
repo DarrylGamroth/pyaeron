@@ -1,7 +1,7 @@
 # pyaeron Implementation Plan
 
 Last updated: 2026-03-01
-Status: Phase 2 complete
+Status: Phase 3 complete
 
 ## Purpose
 Create an idiomatic Python wrapper for the Aeron C client (`libaeron`) with a stable, Python-first API, strong lifecycle management, robust error handling, and production-ready tests.
@@ -53,7 +53,7 @@ Create an idiomatic Python wrapper for the Aeron C client (`libaeron`) with a st
 | 0 | Discovery + API Contract | Completed | Public API contract document accepted |
 | 1 | Project Bootstrap | Completed | Package skeleton + CI + lint/test commands working |
 | 2 | FFI Foundation | Completed | `libaeron` load + core symbols callable |
-| 3 | Error Model | Not Started | Negative returns map to typed exceptions |
+| 3 | Error Model | Completed | Negative returns map to typed exceptions |
 | 4 | Core Lifecycle API | Not Started | `Context` + `Client` lifecycle stable |
 | 5 | Pub/Sub API MVP | Not Started | Publish and receive one message in tests |
 | 6 | Callback and Polling Ergonomics | Not Started | Python handlers stable and documented |
@@ -121,19 +121,19 @@ Exit criteria:
 Objective: Build a Python-native exception hierarchy and centralized result checking.
 
 Tasks:
-- [ ] Implement `errors.py`:
-- [ ] Base `AeronError`.
-- [ ] Typed subclasses (driver timeout, client timeout, conductor timeout, I/O, argument/state errors).
-- [ ] Map `aeron_errcode()` to exception classes.
-- [ ] Provide helpers:
-- [ ] `check_rc(int)` for C functions returning `0/-1`.
-- [ ] `check_position(int)` for offer/claim semantics.
-- [ ] `last_error_message()` utility.
-- [ ] Add tests for mapping behavior.
+- [x] Implement `errors.py`:
+- [x] Base `AeronError`.
+- [x] Typed subclasses (driver timeout, client timeout, conductor timeout, I/O, argument/state errors).
+- [x] Map `aeron_errcode()` to exception classes.
+- [x] Provide helpers:
+- [x] `check_rc(int)` for C functions returning `0/-1`.
+- [x] `check_position(int)` for offer/claim semantics.
+- [x] `last_error_message()` utility.
+- [x] Add tests for mapping behavior.
 
 Exit criteria:
-- [ ] No high-level module checks raw error codes directly.
-- [ ] Tests assert correct exception types/messages.
+- [x] No high-level module checks raw error codes directly.
+- [x] Tests assert correct exception types/messages.
 
 ## Phase 4: Core Lifecycle API
 Objective: Deliver `Context` and `Client` with deterministic lifecycle behavior.
@@ -282,6 +282,9 @@ Use this section for implementation updates.
 - 2026-03-01: Completed Phase 2 FFI foundation. Replaced placeholder loader with `cffi` MVP bindings in `_capi.py`.
 - 2026-03-01: Added Phase 2 smoke tests (`tests/unit/test_capi.py`, `tests/integration/test_capi_symbol_smoke.py`).
 - 2026-03-01: Verified locally in `.venv` with `make check`; integration symbol smoke skipped when `libaeron` is unavailable.
+- 2026-03-01: Completed Phase 3 error model with typed exception hierarchy and helpers (`check_rc`, `check_position`, `last_error_message`).
+- 2026-03-01: Added error mapping tests in `tests/unit/test_errors.py`.
+- 2026-03-01: Verified locally in `.venv` with `make check`; integration tests passed with `libaeron` available.
 
 ## Immediate Next Steps
 - [x] Execute Phase 0 and produce `docs/api-contract.md`.
