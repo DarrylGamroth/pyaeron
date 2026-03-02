@@ -1,7 +1,7 @@
 # pyaeron Implementation Plan
 
-Last updated: 2026-03-01
-Status: Phase 7 complete
+Last updated: 2026-03-02
+Status: Phase 8 complete
 
 ## Purpose
 Create an idiomatic Python wrapper for the Aeron C client (`libaeron`) with a stable, Python-first API, strong lifecycle management, robust error handling, and production-ready tests.
@@ -58,7 +58,7 @@ Create an idiomatic Python wrapper for the Aeron C client (`libaeron`) with a st
 | 5 | Pub/Sub API MVP | Completed | Publish and receive one message in tests |
 | 6 | Callback and Polling Ergonomics | Completed | Python handlers stable and documented |
 | 7 | Integration Matrix + Reliability | Completed | Deterministic integration suite in CI |
-| 8 | Advanced Features | Not Started | Exclusive pub/counters/image extras shipped |
+| 8 | Advanced Features | Completed | Exclusive pub/counters/image extras shipped |
 | 9 | Docs + Release | Not Started | Versioned release with examples and migration notes |
 
 ## Phase 0: Discovery + API Contract
@@ -220,16 +220,16 @@ Exit criteria:
 Objective: Expand API after MVP is stable.
 
 Candidate features:
-- [ ] Exclusive publications.
-- [ ] `try_claim` and buffer claim helpers.
-- [ ] Destination add/remove APIs.
-- [ ] Counters + counters reader.
-- [ ] Image APIs and selected metadata access.
-- [ ] Optional CnC monitoring helpers.
+- [x] Exclusive publications.
+- [x] `try_claim` and buffer claim helpers.
+- [x] Destination add/remove APIs.
+- [x] Counters + counters reader.
+- [x] Image APIs and selected metadata access.
+- [x] Optional CnC monitoring helpers.
 
 Exit criteria:
-- [ ] Each feature ships with tests + docs.
-- [ ] Public API additions are versioned and changelogged.
+- [x] Each feature ships with tests + docs.
+- [x] Public API additions are versioned and changelogged.
 
 ## Phase 9: Documentation + Release
 Objective: Prepare first public release with clear operational guidance.
