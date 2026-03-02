@@ -1,7 +1,7 @@
 # pyaeron Implementation Plan
 
 Last updated: 2026-03-01
-Status: Phase 4 complete
+Status: Phase 5 complete
 
 ## Purpose
 Create an idiomatic Python wrapper for the Aeron C client (`libaeron`) with a stable, Python-first API, strong lifecycle management, robust error handling, and production-ready tests.
@@ -55,7 +55,7 @@ Create an idiomatic Python wrapper for the Aeron C client (`libaeron`) with a st
 | 2 | FFI Foundation | Completed | `libaeron` load + core symbols callable |
 | 3 | Error Model | Completed | Negative returns map to typed exceptions |
 | 4 | Core Lifecycle API | Completed | `Context` + `Client` lifecycle stable |
-| 5 | Pub/Sub API MVP | Not Started | Publish and receive one message in tests |
+| 5 | Pub/Sub API MVP | Completed | Publish and receive one message in tests |
 | 6 | Callback and Polling Ergonomics | Not Started | Python handlers stable and documented |
 | 7 | Integration Matrix + Reliability | Not Started | Deterministic integration suite in CI |
 | 8 | Advanced Features | Not Started | Exclusive pub/counters/image extras shipped |
@@ -160,26 +160,26 @@ Exit criteria:
 Objective: Implement first end-to-end messaging flow with idiomatic wrappers.
 
 Tasks:
-- [ ] Implement `Publication` and `AsyncPublication` wrappers.
-- [ ] Implement `Subscription` and `AsyncSubscription` wrappers.
-- [ ] Blocking helpers with timeout:
-- [ ] `Client.add_publication(...)`
-- [ ] `Client.add_subscription(...)`
-- [ ] `poll_until_ready(...)` internal helper.
-- [ ] `Publication.offer(data)` supporting buffer protocol.
-- [ ] `Publication.is_connected`.
-- [ ] `Subscription.poll(handler, fragment_limit=...)`.
-- [ ] `Subscription.is_connected`.
-- [ ] Add core constants/enums exposed in Pythonic form where needed.
-- [ ] Integration tests:
-- [ ] Add pub/sub.
-- [ ] Offer one message.
-- [ ] Poll one message.
-- [ ] Close resources in all paths.
+- [x] Implement `Publication` wrapper and async-add publication polling flow.
+- [x] Implement `Subscription` wrapper and async-add subscription polling flow.
+- [x] Blocking helpers with timeout:
+- [x] `Client.add_publication(...)`
+- [x] `Client.add_subscription(...)`
+- [x] `poll_until_ready(...)` internal helper.
+- [x] `Publication.offer(data)` supporting buffer protocol.
+- [x] `Publication.is_connected`.
+- [x] `Subscription.poll(handler, fragment_limit=...)`.
+- [x] `Subscription.is_connected`.
+- [x] Add core constants/enums exposed in Pythonic form where needed.
+- [x] Integration tests:
+- [x] Add pub/sub.
+- [x] Offer one message.
+- [x] Poll one message.
+- [x] Close resources in all paths.
 
 Exit criteria:
-- [ ] End-to-end pub/sub works reliably over IPC.
-- [ ] Basic UDP path validated in at least one integration test.
+- [x] End-to-end pub/sub works reliably over IPC.
+- [x] Basic UDP path validated in at least one integration test.
 
 ## Phase 6: Callback and Polling Ergonomics
 Objective: Ensure callback API is safe and intuitive for Python users.
@@ -288,6 +288,9 @@ Use this section for implementation updates.
 - 2026-03-01: Completed Phase 4 core lifecycle API with C-backed `Context` and `Client`.
 - 2026-03-01: Added integration lifecycle coverage in `tests/integration/test_client_lifecycle.py`.
 - 2026-03-01: Verified locally in `.venv` with `make check` (unit + integration).
+- 2026-03-01: Completed Phase 5 pub/sub MVP with real `Publication.offer` and `Subscription.poll`.
+- 2026-03-01: Added integration coverage for IPC and UDP in `tests/integration/test_pubsub_mvp.py`.
+- 2026-03-01: Verified locally in `.venv` with `make check` (all tests passing).
 
 ## Immediate Next Steps
 - [x] Execute Phase 0 and produce `docs/api-contract.md`.
