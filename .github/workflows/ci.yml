@@ -51,6 +51,13 @@ jobs:
           AERON_MD_BINARY: /opt/aeron/bin/aeronmd
         run: make test-integration-fast
 
+      - name: Full coverage baseline gate
+        if: matrix.python-version == '3.12'
+        env:
+          AERON_LIBRARY_PATH: /opt/aeron/lib/libaeron.so
+          AERON_MD_BINARY: /opt/aeron/bin/aeronmd
+        run: make test-full-cov
+
   integration-extended:
     if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
     runs-on: ubuntu-latest

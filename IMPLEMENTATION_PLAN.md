@@ -283,7 +283,7 @@ Current baseline (2026-03-02):
 Target gates:
 - [x] Gate A: unit-only coverage >= 65%
 - [x] Gate B: unit-only coverage >= 75%
-- [ ] Gate C: unit-only coverage >= 85%
+- [x] Gate C: unit-only coverage >= 85%
 - [x] Maintain full-suite coverage >= 85%
 
 Workstream 1: Core wrapper unit tests (`client`, `publication`, `subscription`)
@@ -308,7 +308,7 @@ Workstream 3: Error-path and edge-case matrix
 Workstream 4: Tooling and CI enforcement
 - [x] Add `make test-unit-cov` target producing unit-only coverage report.
 - [x] Add CI job for unit-only coverage with ratcheting threshold.
-- [ ] Fail CI if coverage drops below current baseline for either unit-only or full-suite gates.
+- [x] Fail CI if coverage drops below current baseline for either unit-only or full-suite gates.
 
 ## Progress Log
 Use this section for implementation updates.
@@ -343,6 +343,8 @@ Use this section for implementation updates.
 - 2026-03-02: Added broad fake-CAPI wrapper unit tests (`tests/unit/test_wrapper_behaviors.py`) covering client/publication/subscription/exclusive/counter/image/cnc behavior.
 - 2026-03-02: Increased unit-only coverage from ~54% to ~82%; full-suite coverage measured at ~88%.
 - 2026-03-02: Added `make test-unit-cov` and CI unit coverage gate on Python 3.12.
+- 2026-03-02: Expanded wrapper branch/edge-case tests further; unit-only coverage increased to ~87% and full-suite coverage to ~92%.
+- 2026-03-02: Added baseline coverage gates: `test-unit-cov` (`--cov-fail-under=86`) and `test-full-cov` (`--cov-fail-under=90`) with CI enforcement.
 
 ## Immediate Next Steps
 - [x] Execute Phase 0 and produce `docs/api-contract.md`.

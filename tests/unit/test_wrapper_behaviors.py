@@ -10,13 +10,21 @@ from cffi import FFI
 
 from pyaeron.client import Client
 from pyaeron.cnc import CnC
+from pyaeron.context import Context
 from pyaeron.counter import Counter
 from pyaeron.counters_reader import CountersReader
-from pyaeron.errors import ResourceClosedError, TimedOutError
+from pyaeron.errors import (
+    AeronStateError,
+    BackPressuredError,
+    NotConnectedError,
+    ResourceClosedError,
+    TimedOutError,
+)
 from pyaeron.exclusive_publication import ExclusivePublication
 from pyaeron.image import Image
 from pyaeron.publication import Publication
 from pyaeron.subscription import Subscription
+from pyaeron.util import coerce_buffer
 
 _ENDIAN = "<" if sys.byteorder == "little" else ">"
 _HEADER_VALUES_FMT = f"{_ENDIAN}i b B h i i i i q i Q"
@@ -475,6 +483,9 @@ def test_client_add_resources_success(fake_capi: FakeCapi) -> None:
     xpub.close()
     pub.close()
     client.close()
+    assert client.is_open is False
+    with pytest.raises(ResourceClosedError):
+        _ = client.pointer
 
 
 def test_client_add_publication_timeout(fake_capi: FakeCapi) -> None:
@@ -506,6 +517,7 @@ def test_publication_offer_retry_try_claim_and_destinations(fake_capi: FakeCapi)
     pub.remove_destination("aeron:udp?endpoint=127.0.0.1:9999", timeout=0.1, poll_interval=0.0)
 
     pub.close()
+    assert pub.is_open is False
     with pytest.raises(ResourceClosedError):
         pub.offer(b"x")
 
@@ -528,6 +540,8 @@ def test_exclusive_publication_try_claim_and_destinations(fake_capi: FakeCapi) -
     pub.add_destination("aeron:udp?endpoint=127.0.0.1:8888", timeout=0.1, poll_interval=0.0)
     fake_capi.lib.destination_poll_sequence = [1]
     pub.remove_destination("aeron:udp?endpoint=127.0.0.1:8888", timeout=0.1, poll_interval=0.0)
+    pub.close()
+    assert pub.is_open is False
 
 
 def test_subscription_poll_and_images(fake_capi: FakeCapi) -> None:
@@ -560,6 +574,8 @@ def test_subscription_poll_and_images(fake_capi: FakeCapi) -> None:
     sub.add_destination("aeron:udp?endpoint=127.0.0.1:7777", timeout=0.1, poll_interval=0.0)
     fake_capi.lib.destination_poll_sequence = [1]
     sub.remove_destination("aeron:udp?endpoint=127.0.0.1:7777", timeout=0.1, poll_interval=0.0)
+    sub.close()
+    assert sub.is_open is False
 
 
 def test_subscription_poll_exception_propagates(fake_capi: FakeCapi) -> None:
@@ -589,6 +605,10 @@ def test_subscription_poll_until_timeout(fake_capi: FakeCapi) -> None:
     fake_capi.lib.emit_fragment = False
     with pytest.raises(TimedOutError):
         sub.poll_until(lambda _f, _h: None, timeout=0.0, poll_interval=0.0)
+    with pytest.raises(ValueError):
+        sub.poll(lambda _f, _h: None, fragment_limit=0)
+    with pytest.raises(ValueError):
+        sub.poll_until(lambda _f, _h: None, min_fragments=0)
 
 
 def test_counter_reader_and_close(fake_capi: FakeCapi) -> None:
@@ -622,3 +642,234 @@ def test_cnc_wrappers(fake_capi: FakeCapi, monkeypatch: pytest.MonkeyPatch) -> N
 
         reader = cnc.counters_reader
         assert reader.max_counter_id == 256
+
+
+def test_buffer_claim_abort_and_finalize_state(fake_capi: FakeCapi) -> None:
+    pub = Publication(
+        capi=fake_capi,
+        ptr=fake_capi.lib.publication_ptr,
+        client_ptr=fake_capi.lib.client_ptr,
+        channel="aeron:ipc",
+        stream_id=6,
+    )
+    claim = pub.try_claim(4)
+    claim.abort()
+    assert claim.is_finalized is True
+    with pytest.raises(RuntimeError):
+        claim.write(b"a")
+
+
+def test_destination_timeout_branches(fake_capi: FakeCapi) -> None:
+    pub = Publication(
+        capi=fake_capi,
+        ptr=fake_capi.lib.publication_ptr,
+        client_ptr=fake_capi.lib.client_ptr,
+        channel="aeron:ipc",
+        stream_id=7,
+    )
+    fake_capi.lib.destination_poll_sequence = [0]
+    with pytest.raises(TimedOutError):
+        pub.add_destination("aeron:udp?endpoint=127.0.0.1:10000", timeout=0.0, poll_interval=0.0)
+
+    xpub = ExclusivePublication(
+        capi=fake_capi,
+        ptr=fake_capi.lib.exclusive_publication_ptr,
+        client_ptr=fake_capi.lib.client_ptr,
+        channel="aeron:ipc",
+        stream_id=8,
+    )
+    fake_capi.lib.destination_poll_sequence = [0]
+    with pytest.raises(TimedOutError):
+        xpub.remove_destination(
+            "aeron:udp?endpoint=127.0.0.1:10001",
+            timeout=0.0,
+            poll_interval=0.0,
+        )
+
+    sub = Subscription(
+        capi=fake_capi,
+        ptr=fake_capi.lib.subscription_ptr,
+        client_ptr=fake_capi.lib.client_ptr,
+        channel="aeron:ipc",
+        stream_id=9,
+    )
+    fake_capi.lib.destination_poll_sequence = [0]
+    with pytest.raises(TimedOutError):
+        sub.add_destination("aeron:udp?endpoint=127.0.0.1:10002", timeout=0.0, poll_interval=0.0)
+
+
+def test_offer_with_retry_timeout(fake_capi: FakeCapi) -> None:
+    pub = Publication(
+        capi=fake_capi,
+        ptr=fake_capi.lib.publication_ptr,
+        client_ptr=fake_capi.lib.client_ptr,
+        channel="aeron:ipc",
+        stream_id=10,
+    )
+    fake_capi.lib.publication_offer_sequence = [-1]
+    with pytest.raises(NotConnectedError):
+        pub.offer_with_retry(b"x", timeout=0.0, poll_interval=0.0)
+
+    xpub = ExclusivePublication(
+        capi=fake_capi,
+        ptr=fake_capi.lib.exclusive_publication_ptr,
+        client_ptr=fake_capi.lib.client_ptr,
+        channel="aeron:ipc",
+        stream_id=11,
+    )
+    fake_capi.lib.exclusive_offer_sequence = [-2]
+    with pytest.raises(BackPressuredError):
+        xpub.offer_with_retry(b"x", timeout=0.0, poll_interval=0.0)
+
+
+def test_coerce_buffer_non_contiguous_path() -> None:
+    src = memoryview(bytearray(b"abcd"))[::2]
+    mv = coerce_buffer(src)
+    assert bytes(mv) == b"ac"
+
+
+@dataclass
+class FakeContextState:
+    dir_ptr: Any
+    driver_timeout_ms: int = 10_000
+    keepalive_interval_ns: int = 500_000_000
+    resource_linger_duration_ns: int = 3_000_000_000
+    idle_sleep_duration_ns: int = 16_000_000
+    pre_touch_mapped_memory: bool = False
+    use_conductor_agent_invoker: bool = False
+    client_name_ptr: Any = None
+    closed: bool = False
+
+
+class FakeContextLib:
+    def __init__(self, ffi: FFI) -> None:
+        self._ffi = ffi
+        self._state = FakeContextState(
+            dir_ptr=ffi.new("char[]", b"/tmp/aeron"),
+            client_name_ptr=ffi.new("char[]", b"default"),
+        )
+        self._context_ptr = ffi.cast("aeron_context_t *", 0x9901)
+
+    def aeron_errcode(self) -> int:
+        return 0
+
+    def aeron_errmsg(self) -> Any:
+        return self._ffi.new("char[]", b"fake-error")
+
+    def aeron_context_init(self, ptr: Any) -> int:
+        ptr[0] = self._context_ptr
+        return 0
+
+    def aeron_context_close(self, _ptr: Any) -> int:
+        self._state.closed = True
+        return 0
+
+    def aeron_context_set_dir(self, _ptr: Any, value: Any) -> int:
+        self._state.dir_ptr = value
+        return 0
+
+    def aeron_context_get_dir(self, _ptr: Any) -> Any:
+        return self._state.dir_ptr
+
+    def aeron_context_set_driver_timeout_ms(self, _ptr: Any, value: int) -> int:
+        self._state.driver_timeout_ms = value
+        return 0
+
+    def aeron_context_get_driver_timeout_ms(self, _ptr: Any) -> int:
+        return self._state.driver_timeout_ms
+
+    def aeron_context_set_keepalive_interval_ns(self, _ptr: Any, value: int) -> int:
+        self._state.keepalive_interval_ns = value
+        return 0
+
+    def aeron_context_get_keepalive_interval_ns(self, _ptr: Any) -> int:
+        return self._state.keepalive_interval_ns
+
+    def aeron_context_set_resource_linger_duration_ns(self, _ptr: Any, value: int) -> int:
+        self._state.resource_linger_duration_ns = value
+        return 0
+
+    def aeron_context_get_resource_linger_duration_ns(self, _ptr: Any) -> int:
+        return self._state.resource_linger_duration_ns
+
+    def aeron_context_set_idle_sleep_duration_ns(self, _ptr: Any, value: int) -> int:
+        self._state.idle_sleep_duration_ns = value
+        return 0
+
+    def aeron_context_get_idle_sleep_duration_ns(self, _ptr: Any) -> int:
+        return self._state.idle_sleep_duration_ns
+
+    def aeron_context_set_pre_touch_mapped_memory(self, _ptr: Any, value: bool) -> int:
+        self._state.pre_touch_mapped_memory = value
+        return 0
+
+    def aeron_context_get_pre_touch_mapped_memory(self, _ptr: Any) -> bool:
+        return self._state.pre_touch_mapped_memory
+
+    def aeron_context_set_use_conductor_agent_invoker(self, _ptr: Any, value: bool) -> int:
+        self._state.use_conductor_agent_invoker = value
+        return 0
+
+    def aeron_context_get_use_conductor_agent_invoker(self, _ptr: Any) -> bool:
+        return self._state.use_conductor_agent_invoker
+
+    def aeron_context_set_client_name(self, _ptr: Any, value: Any) -> int:
+        self._state.client_name_ptr = value
+        return 0
+
+    def aeron_context_get_client_name(self, _ptr: Any) -> Any:
+        return self._state.client_name_ptr
+
+
+def _fake_context_capi() -> Any:
+    ffi = FFI()
+    ffi.cdef(
+        """
+        typedef _Bool bool;
+        typedef unsigned long int uint64_t;
+        typedef struct aeron_context_stct aeron_context_t;
+        """
+    )
+    lib = FakeContextLib(ffi)
+    return type(
+        "FakeContextCapi",
+        (),
+        {
+            "ffi": ffi,
+            "lib": lib,
+            "c_string": staticmethod(lambda v: ffi.new("char[]", v.encode())),
+            "string_from_ptr": staticmethod(
+                lambda p: None if p == ffi.NULL else ffi.string(p).decode()
+            ),
+        },
+    )()
+
+
+def test_context_unit_behavior_without_real_libaeron(monkeypatch: pytest.MonkeyPatch) -> None:
+    fake = _fake_context_capi()
+    monkeypatch.setattr("pyaeron.context.load_libaeron", lambda: fake)
+
+    with Context(
+        aeron_dir="/tmp/ctx",
+        driver_timeout_ms=11_000,
+        keepalive_interval_ns=222_000_000,
+        resource_linger_duration_ns=333_000_000,
+        idle_sleep_duration_ns=1_000,
+        pre_touch_mapped_memory=True,
+        use_conductor_agent_invoker=True,
+        client_name="unit-test",
+    ) as ctx:
+        assert ctx.aeron_dir == "/tmp/ctx"
+        assert ctx.driver_timeout_ms == 11_000
+        assert ctx.keepalive_interval_ns == 222_000_000
+        assert ctx.resource_linger_duration_ns == 333_000_000
+        assert ctx.idle_sleep_duration_ns == 1_000
+        assert ctx.pre_touch_mapped_memory is True
+        assert ctx.use_conductor_agent_invoker is True
+        assert ctx.client_name == "unit-test"
+
+        ctx._mark_bound()
+        with pytest.raises(AeronStateError):
+            ctx.aeron_dir = "/tmp/blocked"
+
+    assert ctx.closed is True
