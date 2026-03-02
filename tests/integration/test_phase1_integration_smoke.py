@@ -3,10 +3,14 @@ from pathlib import Path
 import pytest
 
 from pyaeron import Client, Context
+from pyaeron._capi import try_load_libaeron
 
 
 @pytest.mark.integration
 def test_phase1_repository_and_api_smoke() -> None:
+    if try_load_libaeron() is None:
+        pytest.skip("libaeron not available in current environment")
+
     root = Path(__file__).resolve().parents[2]
     assert (root / "README.md").exists()
     assert (root / "IMPLEMENTATION_PLAN.md").exists()

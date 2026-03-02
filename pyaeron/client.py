@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 from types import TracebackType
+from typing import Any
 
 from .context import Context
+from .errors import check_rc
 from .publication import Publication
 from .subscription import Subscription
 from .util import ensure_open
@@ -15,12 +17,21 @@ class Client:
     """
 
     def __init__(self, context: Context) -> None:
-        if context.closed:
-            raise ValueError("Context is closed")
         context._mark_bound()
+        self._capi = context._capi
+        client_ptr = self._capi.ffi.new("aeron_t **")
+        try:
+            check_rc(self._capi.lib.aeron_init(client_ptr, context.pointer), capi=self._capi)
+            self._ptr = client_ptr[0]
+            check_rc(self._capi.lib.aeron_start(self._ptr), capi=self._capi)
+        except Exception:
+            if client_ptr[0] != self._capi.ffi.NULL:
+                # Best-effort cleanup for partially initialized clients.
+                self._capi.lib.aeron_close(client_ptr[0])
+            raise
+
         self._context = context
         self._closed = False
-        self._next_correlation = 1
 
     def __enter__(self) -> Client:
         ensure_open(self._closed, "Client")
@@ -36,24 +47,39 @@ class Client:
 
     @property
     def is_open(self) -> bool:
-        return not self._closed
+        if self._closed:
+            return False
+        return not bool(self._capi.lib.aeron_is_closed(self._ptr))
 
     def close(self) -> None:
+        if self._closed:
+            return
+        check_rc(self._capi.lib.aeron_close(self._ptr), capi=self._capi)
+        self._ptr = self._capi.ffi.NULL
         self._closed = True
 
     def do_work(self) -> int:
         ensure_open(self._closed, "Client")
-        return 0
+        return int(check_rc(self._capi.lib.aeron_main_do_work(self._ptr), capi=self._capi))
 
     def client_id(self) -> int:
         ensure_open(self._closed, "Client")
-        return 1
+        value = int(self._capi.lib.aeron_client_id(self._ptr))
+        if value < 0:
+            check_rc(-1, capi=self._capi)
+        return value
 
     def next_correlation_id(self) -> int:
         ensure_open(self._closed, "Client")
-        value = self._next_correlation
-        self._next_correlation += 1
+        value = int(self._capi.lib.aeron_next_correlation_id(self._ptr))
+        if value < 0:
+            check_rc(-1, capi=self._capi)
         return value
+
+    @property
+    def pointer(self) -> Any:
+        ensure_open(self._closed, "Client")
+        return self._ptr
 
     def add_publication(
         self,

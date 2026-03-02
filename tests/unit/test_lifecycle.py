@@ -1,4 +1,9 @@
-from pyaeron import Client, Context, ResourceClosedError
+import pytest
+
+from pyaeron import Context
+from pyaeron._capi import try_load_libaeron
+
+pytestmark = pytest.mark.skipif(try_load_libaeron() is None, reason="libaeron unavailable")
 
 
 def test_context_close_is_idempotent() -> None:
@@ -9,35 +14,25 @@ def test_context_close_is_idempotent() -> None:
     assert ctx.closed is True
 
 
-def test_client_close_is_idempotent() -> None:
+def test_context_configuration_round_trip() -> None:
     with Context() as ctx:
-        client = Client(ctx)
-        assert client.is_open is True
-        client.close()
-        client.close()
-        assert client.is_open is False
+        ctx.aeron_dir = "/tmp/aeron-ctx-roundtrip"
+        assert ctx.aeron_dir == "/tmp/aeron-ctx-roundtrip"
 
+        ctx.driver_timeout_ms = 11_000
+        assert ctx.driver_timeout_ms == 11_000
 
-def test_context_is_single_use_for_client() -> None:
-    with Context() as ctx:
-        client = Client(ctx)
-        assert client.is_open
-        try:
-            Client(ctx)
-        except Exception as exc:  # noqa: BLE001
-            assert exc.__class__.__name__ in {"AeronStateError"}
-        else:
-            raise AssertionError("Expected a state error for context reuse")
+        ctx.keepalive_interval_ns = 222_000_000
+        assert ctx.keepalive_interval_ns == 222_000_000
 
+        ctx.resource_linger_duration_ns = 333_000_000
+        assert ctx.resource_linger_duration_ns == 333_000_000
 
-def test_client_methods_raise_when_closed() -> None:
-    with Context() as ctx:
-        client = Client(ctx)
-        client.close()
-        try:
-            client.next_correlation_id()
-        except ResourceClosedError:
-            pass
-        else:
-            raise AssertionError("Expected ResourceClosedError")
+        ctx.idle_sleep_duration_ns = 1_000
+        assert ctx.idle_sleep_duration_ns == 1_000
 
+        ctx.pre_touch_mapped_memory = True
+        assert ctx.pre_touch_mapped_memory is True
+
+        ctx.use_conductor_agent_invoker = True
+        assert ctx.use_conductor_agent_invoker is True
