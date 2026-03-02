@@ -240,6 +240,8 @@ class Client:
             key_mv = key_mv.cast("B")
         if not key_mv.c_contiguous:
             key_mv = memoryview(bytes(key_mv))
+        label_bytes = label.encode("utf-8")
+        label_c = self._capi.ffi.new("char[]", label_bytes)
 
         async_ptr = self._capi.ffi.new("aeron_async_add_counter_t **")
         check_rc(
@@ -249,8 +251,8 @@ class Client:
                 type_id,
                 self._capi.ffi.from_buffer(key_mv) if len(key_mv) > 0 else self._capi.ffi.NULL,
                 len(key_mv),
-                self._capi.c_string(label),
-                len(label),
+                label_c,
+                len(label_bytes),
             ),
             capi=self._capi,
         )

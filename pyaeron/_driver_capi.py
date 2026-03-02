@@ -14,9 +14,9 @@ _CDEF = r"""
 typedef _Bool bool;
 typedef signed int int32_t;
 typedef unsigned int uint32_t;
-typedef signed long int int64_t;
-typedef unsigned long int uint64_t;
-typedef unsigned long size_t;
+typedef signed long long int64_t;
+typedef unsigned long long uint64_t;
+typedef unsigned long long size_t;
 
 typedef struct aeron_driver_context_stct aeron_driver_context_t;
 typedef struct aeron_driver_stct aeron_driver_t;

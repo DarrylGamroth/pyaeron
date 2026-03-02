@@ -128,13 +128,17 @@ class MediaDriverContext:
             )
         self._bound = True
 
+    def _ensure_unbound(self) -> None:
+        ensure_open(self._closed, "MediaDriverContext")
+        if self._bound:
+            raise AeronStateError(
+                "MediaDriverContext instances are single-use for MediaDriver launch"
+            )
+
     def _ensure_mutable(self) -> None:
         ensure_open(self._closed, "MediaDriverContext")
         if self._bound:
             raise AeronStateError("MediaDriverContext cannot be mutated after MediaDriver launch")
-
-    def _adopted_by_driver(self) -> None:
-        self._bound = True
 
     def _mark_closed_by_driver(self) -> None:
         self._ptr = self._capi.ffi.NULL
@@ -156,7 +160,7 @@ class MediaDriver:
     """Embedded Aeron media driver wrapper."""
 
     def __init__(self, context: MediaDriverContext, *, manual_main_loop: bool = False) -> None:
-        context._mark_bound()
+        context._ensure_unbound()
         self._capi = context._capi
         driver_ptr = self._capi.ffi.new("aeron_driver_t **")
         try:
@@ -171,8 +175,8 @@ class MediaDriver:
                 self._capi.lib.aeron_driver_close(driver_ptr[0])
             raise
 
+        context._mark_bound()
         self._context = context
-        self._context._adopted_by_driver()
         self._closed = False
         self._manual_main_loop = manual_main_loop
 

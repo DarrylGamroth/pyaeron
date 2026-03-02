@@ -33,6 +33,8 @@ _REQUIRED_SYMBOLS = (
     "aeron_close",
     "aeron_is_closed",
     "aeron_main_do_work",
+    "aeron_client_id",
+    "aeron_next_correlation_id",
     "aeron_async_add_publication",
     "aeron_async_add_publication_poll",
     "aeron_async_add_exclusive_publication",

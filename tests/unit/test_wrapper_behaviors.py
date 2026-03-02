@@ -60,6 +60,7 @@ class FakeLib:
         self.subscription_poll_sequence: list[bool] = [True]
         self.counter_poll_sequence: list[bool] = [True]
         self.destination_poll_sequence: list[int] = [1]
+        self.last_counter_label_length: int | None = None
 
         self.publication_offer_sequence: list[int] = [1]
         self.exclusive_offer_sequence: list[int] = [1]
@@ -135,7 +136,17 @@ class FakeLib:
         subscription_ptr[0] = self.subscription_ptr if complete else self._ffi.NULL
         return 0
 
-    def aeron_async_add_counter(self, async_ptr: Any, _client: Any, *_rest: Any) -> int:
+    def aeron_async_add_counter(
+        self,
+        async_ptr: Any,
+        _client: Any,
+        _type_id: int,
+        _key_buffer: Any,
+        _key_length: int,
+        _label_buffer: Any,
+        label_length: int,
+    ) -> int:
+        self.last_counter_label_length = int(label_length)
         async_ptr[0] = self._ffi.cast("aeron_async_add_counter_t *", 0x1004)
         return 0
 
@@ -494,6 +505,17 @@ def test_client_add_publication_timeout(fake_capi: FakeCapi) -> None:
     client = Client(ctx)
     with pytest.raises(TimedOutError):
         client.add_publication("aeron:ipc", 10, timeout=0.0, poll_interval=0.0)
+
+
+def test_client_add_counter_uses_utf8_byte_length(fake_capi: FakeCapi) -> None:
+    ctx = FakeContext(_capi=fake_capi, _ptr=fake_capi.ffi.cast("aeron_context_t *", 0x44))
+    client = Client(ctx)
+    counter = client.add_counter(type_id=1, label="naive-π", timeout=0.1, poll_interval=0.0)
+    try:
+        assert fake_capi.lib.last_counter_label_length == len("naive-π".encode())
+    finally:
+        counter.close()
+        client.close()
 
 
 def test_publication_offer_retry_try_claim_and_destinations(fake_capi: FakeCapi) -> None:

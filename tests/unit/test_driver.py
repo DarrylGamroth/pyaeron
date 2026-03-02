@@ -6,7 +6,7 @@ import pytest
 from cffi import FFI
 
 from pyaeron.driver import MediaDriver, MediaDriverContext, ThreadingMode
-from pyaeron.errors import AeronStateError, ResourceClosedError
+from pyaeron.errors import AeronError, AeronStateError, ResourceClosedError
 
 
 class _FakeDriverLib:
@@ -22,6 +22,8 @@ class _FakeDriverLib:
         self._threading_mode = 0
         self._context_closed = False
         self._driver_closed = False
+        self.fail_init = False
+        self.fail_start = False
 
     def aeron_errcode(self) -> int:
         return 0
@@ -66,10 +68,14 @@ class _FakeDriverLib:
         return self._threading_mode
 
     def aeron_driver_init(self, driver_ptr: Any, _context: Any) -> int:
+        if self.fail_init:
+            return -1
         driver_ptr[0] = self._driver_ptr
         return 0
 
     def aeron_driver_start(self, _driver: Any, _manual_main_loop: bool) -> int:
+        if self.fail_start:
+            return -1
         return 0
 
     def aeron_driver_main_do_work(self, _driver: Any) -> int:
@@ -170,3 +176,17 @@ def test_launch_embedded_defaults(fake_driver_capi: _FakeDriverCapi) -> None:
         assert driver.context.dir_delete_on_shutdown is True
     finally:
         driver.close()
+
+
+def test_start_failure_does_not_leave_context_bound(fake_driver_capi: _FakeDriverCapi) -> None:
+    fake_driver_capi.lib.fail_start = True
+    ctx = MediaDriverContext(aeron_dir="/tmp/md-fail")
+
+    with pytest.raises(AeronError):
+        MediaDriver(ctx)
+
+    # Context remains mutable/closable after failed launch.
+    ctx.aeron_dir = "/tmp/md-fail-2"
+    ctx.close()
+    assert ctx.closed is True
+    assert fake_driver_capi.lib._driver_closed is True
