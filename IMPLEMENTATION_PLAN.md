@@ -255,6 +255,7 @@ Exit criteria:
 - [ ] Structured logging hooks for diagnostics.
 - [ ] Performance baseline measurements (latency/throughput smoke benchmark).
 - [ ] API stability policy for pre-1.0 iterations.
+- [ ] Increase unit test coverage for core wrappers (see Coverage Improvement Plan).
 
 ## Risk Register
 | Risk | Impact | Likelihood | Mitigation |
@@ -271,6 +272,43 @@ Exit criteria:
 - [ ] Docs updated.
 - [ ] Changelog entry added (if public behavior changed).
 - [ ] Review notes captured in this file or linked docs.
+
+## Coverage Improvement Plan
+Objective: raise isolated unit-test confidence while preserving integration coverage.
+
+Current baseline (2026-03-02):
+- Unit-only coverage: ~54%
+- Full-suite coverage: ~87%
+
+Target gates:
+- [x] Gate A: unit-only coverage >= 65%
+- [x] Gate B: unit-only coverage >= 75%
+- [ ] Gate C: unit-only coverage >= 85%
+- [x] Maintain full-suite coverage >= 85%
+
+Workstream 1: Core wrapper unit tests (`client`, `publication`, `subscription`)
+- [x] Add fake/stub CAPI fixture for deterministic return code control.
+- [x] Test `Client.add_*` timeout paths and success polling loops.
+- [x] Test `Publication.offer_with_retry` transient/timeout behavior in isolation.
+- [x] Test `Publication` and `Subscription` destination add/remove polling outcomes.
+- [x] Test `Subscription.poll` callback exception propagation and fragment-limit validation.
+
+Workstream 2: Advanced wrapper unit tests (`exclusive_publication`, `counter`, `image`, `cnc`)
+- [x] Add `ExclusivePublication` parity tests for offer/retry/try_claim and destination operations.
+- [x] Add `Counter` tests for constants/value read-write/close idempotency.
+- [x] Add `CountersReader` tests for max-id/value access bounds and error behavior.
+- [x] Add `Image` tests for constants extraction and release semantics.
+- [x] Add `CnC` tests for constants, filename, heartbeat, and error-log callback collection.
+
+Workstream 3: Error-path and edge-case matrix
+- [ ] Add targeted tests for `check_rc`/`check_position` call sites across wrappers.
+- [x] Add validation tests for invalid argument/value boundaries.
+- [x] Add resource-state tests for closed-object access across all wrappers.
+
+Workstream 4: Tooling and CI enforcement
+- [x] Add `make test-unit-cov` target producing unit-only coverage report.
+- [x] Add CI job for unit-only coverage with ratcheting threshold.
+- [ ] Fail CI if coverage drops below current baseline for either unit-only or full-suite gates.
 
 ## Progress Log
 Use this section for implementation updates.
@@ -302,6 +340,9 @@ Use this section for implementation updates.
 - 2026-03-02: Added header-driven cffi generation (`scripts/generate_cdef.py`) and switched `_capi.py` to use generated declarations.
 - 2026-03-02: Completed Phase 9 docs and release readiness: comprehensive `README`, runnable examples, API reference, troubleshooting guide, and versioning policy.
 - 2026-03-02: Bumped version to `0.1.0`, produced release notes (`docs/release.md`), and built release artifacts.
+- 2026-03-02: Added broad fake-CAPI wrapper unit tests (`tests/unit/test_wrapper_behaviors.py`) covering client/publication/subscription/exclusive/counter/image/cnc behavior.
+- 2026-03-02: Increased unit-only coverage from ~54% to ~82%; full-suite coverage measured at ~88%.
+- 2026-03-02: Added `make test-unit-cov` and CI unit coverage gate on Python 3.12.
 
 ## Immediate Next Steps
 - [x] Execute Phase 0 and produce `docs/api-contract.md`.

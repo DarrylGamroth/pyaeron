@@ -40,6 +40,10 @@ jobs:
       - name: Unit tests
         run: make test
 
+      - name: Unit coverage gate
+        if: matrix.python-version == '3.12'
+        run: make test-unit-cov
+
       - name: Integration smoke
         if: matrix.python-version == '3.12'
         env:
