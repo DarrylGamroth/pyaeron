@@ -3,13 +3,14 @@
 `pyaeron` is an idiomatic Python wrapper around the Aeron C client (`libaeron`).
 
 ## Status
-Phase 5 foundation is complete:
+Phase 6 foundation is complete:
 - project packaging and tooling are configured
 - package/module skeleton is in place
 - `cffi`-based Aeron C API loader and MVP symbol bindings are implemented
 - typed Aeron error model (`check_rc`, `check_position`, code-to-exception mapping) is implemented
 - `Context` and `Client` now use real Aeron C lifecycle calls
 - pub/sub MVP is live: `Client.add_publication`, `Client.add_subscription`, `Publication.offer`, `Subscription.poll`
+- callback ergonomics helpers are live: `copy_fragment`, `FragmentCallbackAdapter`, `Subscription.poll_until`, `Publication.offer_with_retry`
 - lint, type checking, unit tests, and integration-smoke CI are wired
 
 Core Aeron functionality is implemented in later phases.
@@ -30,3 +31,4 @@ make check
 ## Planning Docs
 - Implementation tracker: `IMPLEMENTATION_PLAN.md`
 - API contract: `docs/api-contract.md`
+- Callback/lifetime semantics: `docs/callbacks.md`

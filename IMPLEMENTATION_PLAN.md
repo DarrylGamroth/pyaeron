@@ -1,7 +1,7 @@
 # pyaeron Implementation Plan
 
 Last updated: 2026-03-01
-Status: Phase 5 complete
+Status: Phase 6 complete
 
 ## Purpose
 Create an idiomatic Python wrapper for the Aeron C client (`libaeron`) with a stable, Python-first API, strong lifecycle management, robust error handling, and production-ready tests.
@@ -56,7 +56,7 @@ Create an idiomatic Python wrapper for the Aeron C client (`libaeron`) with a st
 | 3 | Error Model | Completed | Negative returns map to typed exceptions |
 | 4 | Core Lifecycle API | Completed | `Context` + `Client` lifecycle stable |
 | 5 | Pub/Sub API MVP | Completed | Publish and receive one message in tests |
-| 6 | Callback and Polling Ergonomics | Not Started | Python handlers stable and documented |
+| 6 | Callback and Polling Ergonomics | Completed | Python handlers stable and documented |
 | 7 | Integration Matrix + Reliability | Not Started | Deterministic integration suite in CI |
 | 8 | Advanced Features | Not Started | Exclusive pub/counters/image extras shipped |
 | 9 | Docs + Release | Not Started | Versioned release with examples and migration notes |
@@ -185,17 +185,17 @@ Exit criteria:
 Objective: Ensure callback API is safe and intuitive for Python users.
 
 Tasks:
-- [ ] Implement callback adapters in `handlers.py`.
-- [ ] Preserve callback references to avoid GC invalidation.
-- [ ] Convert fragment buffer to ergonomic Python type (default `memoryview`, with optional copy helper).
-- [ ] Header wrapper/value object for key fields.
-- [ ] Add timeout-aware poll loop helpers.
-- [ ] Add backpressure handling helper patterns.
-- [ ] Document callback lifetime guarantees and caveats.
+- [x] Implement callback adapters in `handlers.py`.
+- [x] Preserve callback references to avoid GC invalidation.
+- [x] Convert fragment buffer to ergonomic Python type (default `memoryview`, with optional copy helper).
+- [x] Header wrapper/value object for key fields.
+- [x] Add timeout-aware poll loop helpers.
+- [x] Add backpressure handling helper patterns.
+- [x] Document callback lifetime guarantees and caveats.
 
 Exit criteria:
-- [ ] Callback tests are stable across repeated runs.
-- [ ] No callback-related crashes under stress test loop.
+- [x] Callback tests are stable across repeated runs.
+- [x] No callback-related crashes under stress test loop.
 
 ## Phase 7: Integration Matrix + Reliability
 Objective: Make integration tests deterministic and actionable.
@@ -291,6 +291,9 @@ Use this section for implementation updates.
 - 2026-03-01: Completed Phase 5 pub/sub MVP with real `Publication.offer` and `Subscription.poll`.
 - 2026-03-01: Added integration coverage for IPC and UDP in `tests/integration/test_pubsub_mvp.py`.
 - 2026-03-01: Verified locally in `.venv` with `make check` (all tests passing).
+- 2026-03-01: Completed Phase 6 callback ergonomics with adapters/copy helpers and timeout-aware polling helpers.
+- 2026-03-01: Added `docs/callbacks.md` and unit coverage in `tests/unit/test_handlers.py`.
+- 2026-03-01: Verified locally in `.venv` with `make check` (unit + integration).
 
 ## Immediate Next Steps
 - [x] Execute Phase 0 and produce `docs/api-contract.md`.
