@@ -5,17 +5,17 @@ from types import TracebackType
 from typing import Any
 
 from .context import Context
+from .counter import Counter
+from .counters_reader import CountersReader
 from .errors import TimedOutError, check_rc
+from .exclusive_publication import ExclusivePublication
 from .publication import Publication
 from .subscription import Subscription
 from .util import ensure_open
 
 
 class Client:
-    """High-level client lifecycle wrapper.
-
-    Phase 1 provides deterministic lifecycle behavior and API shape.
-    """
+    """High-level client lifecycle wrapper."""
 
     def __init__(self, context: Context) -> None:
         context._mark_bound()
@@ -78,6 +78,11 @@ class Client:
         return value
 
     @property
+    def counters_reader(self) -> CountersReader:
+        ensure_open(self._closed, "Client")
+        return CountersReader(self._capi, self._capi.lib.aeron_counters_reader(self._ptr))
+
+    @property
     def pointer(self) -> Any:
         ensure_open(self._closed, "Client")
         return self._ptr
@@ -113,6 +118,7 @@ class Client:
                 return Publication(
                     capi=self._capi,
                     ptr=publication_ptr[0],
+                    client_ptr=self._ptr,
                     channel=channel,
                     stream_id=stream_id,
                 )
@@ -120,6 +126,53 @@ class Client:
             if deadline is not None and time.monotonic() >= deadline:
                 raise TimedOutError(
                     f"Timed out waiting for publication: channel={channel!r}, stream_id={stream_id}"
+                )
+
+            self._wait_iteration(poll_interval)
+
+    def add_exclusive_publication(
+        self,
+        channel: str,
+        stream_id: int,
+        *,
+        timeout: float | None = 10.0,
+        poll_interval: float = 0.001,
+    ) -> ExclusivePublication:
+        ensure_open(self._closed, "Client")
+        async_ptr = self._capi.ffi.new("aeron_async_add_exclusive_publication_t **")
+        check_rc(
+            self._capi.lib.aeron_async_add_exclusive_publication(
+                async_ptr,
+                self._ptr,
+                self._capi.c_string(channel),
+                stream_id,
+            ),
+            capi=self._capi,
+        )
+
+        deadline = None if timeout is None else time.monotonic() + timeout
+        publication_ptr = self._capi.ffi.new("aeron_exclusive_publication_t **")
+        while True:
+            check_rc(
+                self._capi.lib.aeron_async_add_exclusive_publication_poll(
+                    publication_ptr,
+                    async_ptr[0],
+                ),
+                capi=self._capi,
+            )
+            if publication_ptr[0] != self._capi.ffi.NULL:
+                return ExclusivePublication(
+                    capi=self._capi,
+                    ptr=publication_ptr[0],
+                    client_ptr=self._ptr,
+                    channel=channel,
+                    stream_id=stream_id,
+                )
+
+            if deadline is not None and time.monotonic() >= deadline:
+                raise TimedOutError(
+                    "Timed out waiting for exclusive publication: "
+                    f"channel={channel!r}, stream_id={stream_id}"
                 )
 
             self._wait_iteration(poll_interval)
@@ -159,6 +212,7 @@ class Client:
                 return Subscription(
                     capi=self._capi,
                     ptr=subscription_ptr[0],
+                    client_ptr=self._ptr,
                     channel=channel,
                     stream_id=stream_id,
                 )
@@ -168,6 +222,51 @@ class Client:
                     "Timed out waiting for subscription: "
                     f"channel={channel!r}, stream_id={stream_id}"
                 )
+
+            self._wait_iteration(poll_interval)
+
+    def add_counter(
+        self,
+        *,
+        type_id: int,
+        label: str,
+        key: bytes | bytearray | memoryview = b"",
+        timeout: float | None = 10.0,
+        poll_interval: float = 0.001,
+    ) -> Counter:
+        ensure_open(self._closed, "Client")
+        key_mv = memoryview(key)
+        if key_mv.format != "B":
+            key_mv = key_mv.cast("B")
+        if not key_mv.c_contiguous:
+            key_mv = memoryview(bytes(key_mv))
+
+        async_ptr = self._capi.ffi.new("aeron_async_add_counter_t **")
+        check_rc(
+            self._capi.lib.aeron_async_add_counter(
+                async_ptr,
+                self._ptr,
+                type_id,
+                self._capi.ffi.from_buffer(key_mv) if len(key_mv) > 0 else self._capi.ffi.NULL,
+                len(key_mv),
+                self._capi.c_string(label),
+                len(label),
+            ),
+            capi=self._capi,
+        )
+
+        deadline = None if timeout is None else time.monotonic() + timeout
+        counter_ptr = self._capi.ffi.new("aeron_counter_t **")
+        while True:
+            check_rc(
+                self._capi.lib.aeron_async_add_counter_poll(counter_ptr, async_ptr[0]),
+                capi=self._capi,
+            )
+            if counter_ptr[0] != self._capi.ffi.NULL:
+                return Counter(self._capi, counter_ptr[0])
+
+            if deadline is not None and time.monotonic() >= deadline:
+                raise TimedOutError(f"Timed out waiting for counter registration: label={label!r}")
 
             self._wait_iteration(poll_interval)
 

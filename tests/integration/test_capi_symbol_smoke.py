@@ -17,4 +17,3 @@ def test_libaeron_symbol_smoke() -> None:
     assert isinstance(capi.lib.aeron_errcode(), int)
     msg_ptr = capi.lib.aeron_errmsg()
     assert msg_ptr == capi.ffi.NULL or isinstance(capi.string_from_ptr(msg_ptr), str)
-

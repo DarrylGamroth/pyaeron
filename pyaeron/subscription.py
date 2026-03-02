@@ -7,6 +7,7 @@ from typing import Any
 
 from .errors import TimedOutError, check_rc
 from .handlers import FragmentCallbackAdapter, FragmentHandler
+from .image import Image
 from .types import Header
 from .util import ensure_open
 
@@ -23,9 +24,17 @@ def _decode_header_values(
 class Subscription:
     """High-level subscription wrapper backed by a real Aeron subscription pointer."""
 
-    def __init__(self, capi: Any, ptr: Any, channel: str, stream_id: int) -> None:
+    def __init__(
+        self,
+        capi: Any,
+        ptr: Any,
+        client_ptr: Any,
+        channel: str,
+        stream_id: int,
+    ) -> None:
         self._capi = capi
         self._ptr = ptr
+        self._client_ptr = client_ptr
         self.channel = channel
         self.stream_id = stream_id
         self._closed = False
@@ -60,6 +69,20 @@ class Subscription:
     def is_connected(self) -> bool:
         ensure_open(self._closed, "Subscription")
         return bool(self._capi.lib.aeron_subscription_is_connected(self._ptr))
+
+    @property
+    def image_count(self) -> int:
+        ensure_open(self._closed, "Subscription")
+        return int(
+            check_rc(self._capi.lib.aeron_subscription_image_count(self._ptr), capi=self._capi)
+        )
+
+    def image_by_session_id(self, session_id: int) -> Image | None:
+        ensure_open(self._closed, "Subscription")
+        image_ptr = self._capi.lib.aeron_subscription_image_by_session_id(self._ptr, session_id)
+        if image_ptr == self._capi.ffi.NULL:
+            return None
+        return Image(self._capi, image_ptr, self._ptr)
 
     def poll(self, handler: FragmentHandler, *, fragment_limit: int = 10) -> int:
         ensure_open(self._closed, "Subscription")
@@ -168,3 +191,63 @@ class Subscription:
             if poll_interval > 0:
                 time.sleep(poll_interval)
         return total
+
+    def add_destination(
+        self,
+        uri: str,
+        *,
+        timeout: float | None = 10.0,
+        poll_interval: float = 0.001,
+    ) -> None:
+        self._update_destination(uri, is_add=True, timeout=timeout, poll_interval=poll_interval)
+
+    def remove_destination(
+        self,
+        uri: str,
+        *,
+        timeout: float | None = 10.0,
+        poll_interval: float = 0.001,
+    ) -> None:
+        self._update_destination(uri, is_add=False, timeout=timeout, poll_interval=poll_interval)
+
+    def _update_destination(
+        self,
+        uri: str,
+        *,
+        is_add: bool,
+        timeout: float | None,
+        poll_interval: float,
+    ) -> None:
+        ensure_open(self._closed, "Subscription")
+        async_ptr = self._capi.ffi.new("aeron_async_destination_t **")
+        call = (
+            self._capi.lib.aeron_subscription_async_add_destination
+            if is_add
+            else self._capi.lib.aeron_subscription_async_remove_destination
+        )
+        check_rc(
+            call(
+                async_ptr,
+                self._client_ptr,
+                self._ptr,
+                self._capi.c_string(uri),
+            ),
+            capi=self._capi,
+        )
+
+        deadline = None if timeout is None else time.monotonic() + timeout
+        while True:
+            rc = int(
+                check_rc(
+                    self._capi.lib.aeron_subscription_async_destination_poll(async_ptr[0]),
+                    capi=self._capi,
+                )
+            )
+            if rc == 1:
+                return
+            if deadline is not None and time.monotonic() >= deadline:
+                raise TimedOutError(
+                    f"Timed out waiting to {'add' if is_add else 'remove'} destination: {uri!r}"
+                )
+            if poll_interval > 0:
+                time.sleep(poll_interval)

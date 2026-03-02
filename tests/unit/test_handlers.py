@@ -35,4 +35,3 @@ def test_fragment_callback_adapter_copy_mode() -> None:
     adapter = FragmentCallbackAdapter(handler, copy_payload=True)
     adapter(memoryview(b"payload"), _header())
     assert received == [b"payload"]
-

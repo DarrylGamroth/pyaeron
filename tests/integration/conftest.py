@@ -18,8 +18,7 @@ def media_driver() -> MediaDriverHarness:
     binary = find_aeronmd_binary()
     if binary is None:
         pytest.skip(
-            "aeronmd binary not found "
-            "(set AERON_MD_BINARY or install /opt/aeron/bin/aeronmd)"
+            "aeronmd binary not found (set AERON_MD_BINARY or install /opt/aeron/bin/aeronmd)"
         )
 
     harness = MediaDriverHarness.launch(binary)

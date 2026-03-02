@@ -22,8 +22,7 @@ def _await_connected(client: Client, pub, sub, *, invoker: bool, timeout: float 
             return
         time.sleep(0.001)
     raise TimeoutError(
-        "Timed out waiting for publication/subscription connectivity "
-        f"after {timeout:.3f}s"
+        f"Timed out waiting for publication/subscription connectivity after {timeout:.3f}s"
     )
 
 

@@ -67,4 +67,3 @@ def test_check_position_passthrough_and_raise() -> None:
     assert check_position(1, errmsg="ok") == 1
     with pytest.raises(BackPressuredError):
         check_position(-2, errmsg="back pressured")
-
