@@ -9,6 +9,10 @@ on:
   schedule:
     - cron: "0 6 * * *"
 
+env:
+  JAVA_VERSION: "17"
+  AERON_VERSION: "1.50.0"
+
 jobs:
   lint-type-test:
     runs-on: ubuntu-latest
@@ -61,6 +65,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: aeron-io/aeron
+          ref: ${{ env.AERON_VERSION }}
           path: aeron-src
 
       - name: Set up Python
@@ -72,7 +77,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: zulu
-          java-version: "17"
+          java-version: ${{ env.JAVA_VERSION }}
 
       - name: Install dependencies
         run: |
@@ -104,7 +109,6 @@ jobs:
         if: runner.os == 'Linux'
         shell: bash
         run: |
-          AERON_VERSION=$(cat aeron-src/version.txt)
           curl -fsSL -o aeron-all.jar \
             "https://repo1.maven.org/maven2/io/aeron/aeron-all/${AERON_VERSION}/aeron-all-${AERON_VERSION}.jar"
 
@@ -112,9 +116,7 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          $AeronVersion = Get-Content aeron-src/version.txt -Raw
-          $AeronVersion = $AeronVersion.Trim()
-          $Url = "https://repo1.maven.org/maven2/io/aeron/aeron-all/$AeronVersion/aeron-all-$AeronVersion.jar"
+          $Url = "https://repo1.maven.org/maven2/io/aeron/aeron-all/${{ env.AERON_VERSION }}/aeron-all-${{ env.AERON_VERSION }}.jar"
           Invoke-WebRequest -Uri $Url -OutFile aeron-all.jar
 
       - name: Start Java media driver (Linux)
@@ -221,6 +223,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: aeron-io/aeron
+          ref: ${{ env.AERON_VERSION }}
           path: aeron-src
 
       - name: Set up Python
@@ -232,7 +235,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: zulu
-          java-version: "17"
+          java-version: ${{ env.JAVA_VERSION }}
 
       - name: Install dependencies
         run: |
@@ -250,7 +253,6 @@ jobs:
 
       - name: Download Aeron All JAR
         run: |
-          AERON_VERSION=$(cat aeron-src/version.txt)
           curl -fsSL -o aeron-all.jar \
             "https://repo1.maven.org/maven2/io/aeron/aeron-all/${AERON_VERSION}/aeron-all-${AERON_VERSION}.jar"
 
