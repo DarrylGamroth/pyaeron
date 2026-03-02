@@ -202,15 +202,20 @@ jobs:
 
       - name: Stop Java media driver (Windows)
         if: always() && runner.os == 'Windows'
+        continue-on-error: true
         shell: pwsh
         run: |
-          $PidFile = Join-Path $env:RUNNER_TEMP "aeron-java-driver.pid"
-          if (Test-Path $PidFile) {
-            $Pid = Get-Content $PidFile -Raw
-            $Pid = $Pid.Trim()
-            if ($Pid -match '^[0-9]+$') {
-              Stop-Process -Id ([int]$Pid) -ErrorAction SilentlyContinue
+          try {
+            $PidFile = Join-Path $env:RUNNER_TEMP "aeron-java-driver.pid"
+            if (Test-Path $PidFile) {
+              $Pid = [string](Get-Content $PidFile -Raw -ErrorAction SilentlyContinue)
+              $Pid = $Pid.Trim()
+              if ($Pid -match '^[0-9]+$') {
+                Stop-Process -Id ([int]$Pid) -ErrorAction SilentlyContinue
+              }
             }
+          } catch {
+            Write-Host "Best-effort cleanup ignored: $($_.Exception.Message)"
           }
 
   integration-extended:
