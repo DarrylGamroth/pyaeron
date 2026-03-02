@@ -105,20 +105,36 @@ class Subscription:
                 if position < 0:
                     check_rc(-1, capi=self._capi)
 
-                raw = bytes(self._capi.ffi.buffer(values[0].data, 44))
-                (
-                    frame_length,
-                    version,
-                    flags,
-                    frame_type,
-                    term_offset,
-                    session_id,
-                    stream_id,
-                    term_id,
-                    reserved_value,
-                    initial_term_id,
-                    position_bits_to_shift,
-                ) = _decode_header_values(raw)
+                # Support both historic compact layout (`data[44]`) and current
+                # expanded frame layout from aeron_header_values_t.
+                if hasattr(values[0], "data"):
+                    raw = bytes(self._capi.ffi.buffer(values[0].data, 44))
+                    (
+                        frame_length,
+                        version,
+                        flags,
+                        frame_type,
+                        term_offset,
+                        session_id,
+                        stream_id,
+                        term_id,
+                        reserved_value,
+                        initial_term_id,
+                        position_bits_to_shift,
+                    ) = _decode_header_values(raw)
+                else:
+                    frame = values[0].frame
+                    frame_length = int(frame.frame_length)
+                    version = int(frame.version)
+                    flags = int(frame.flags)
+                    frame_type = int(frame.type)
+                    term_offset = int(frame.term_offset)
+                    session_id = int(frame.session_id)
+                    stream_id = int(frame.stream_id)
+                    term_id = int(frame.term_id)
+                    reserved_value = int(frame.reserved_value)
+                    initial_term_id = int(values[0].initial_term_id)
+                    position_bits_to_shift = int(values[0].position_bits_to_shift)
 
                 header = Header(
                     frame_length=frame_length,

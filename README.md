@@ -21,6 +21,19 @@ python -m pip install -e ".[dev]"
 make check
 ```
 
+## Regenerating C Declarations
+`pyaeron` uses generated `cffi` declarations sourced from Aeron's `aeronc.h`.
+
+```bash
+make generate-cdef
+```
+
+By default this reads `../aeron/aeron-client/src/main/c/aeronc.h`. You can override paths with:
+
+```bash
+python scripts/generate_cdef.py --header /path/to/aeronc.h --output pyaeron/_generated_cdef.py
+```
+
 ## Repository Layout
 - `pyaeron/`: package source
 - `tests/`: unit and integration-smoke tests
