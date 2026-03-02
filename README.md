@@ -19,10 +19,31 @@ Current version: `0.1.0`
   - embedded driver mode using `MediaDriver` (`libaeron_driver` required)
 
 ## Installation
-From PyPI:
+From GitHub Actions artifact (recommended):
+
+1. Open a successful CI run in GitHub Actions.
+2. Download the `pyaeron-dist` artifact.
+3. Extract it and install the wheel (or sdist).
+
+Linux/macOS:
 
 ```bash
-python -m pip install pyaeron
+unzip pyaeron-dist.zip -d dist
+python -m pip install dist/pyaeron-*.whl
+```
+
+Windows PowerShell:
+
+```powershell
+Expand-Archive .\pyaeron-dist.zip -DestinationPath .\dist
+python -m pip install .\dist\pyaeron-*.whl
+```
+
+With GitHub CLI:
+
+```bash
+gh run download <run-id> -n pyaeron-dist -D dist
+python -m pip install dist/pyaeron-*.whl
 ```
 
 From source:
