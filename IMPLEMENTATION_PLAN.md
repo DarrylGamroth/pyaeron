@@ -1,7 +1,7 @@
 # pyaeron Implementation Plan
 
 Last updated: 2026-03-01
-Status: Phase 3 complete
+Status: Phase 4 complete
 
 ## Purpose
 Create an idiomatic Python wrapper for the Aeron C client (`libaeron`) with a stable, Python-first API, strong lifecycle management, robust error handling, and production-ready tests.
@@ -54,7 +54,7 @@ Create an idiomatic Python wrapper for the Aeron C client (`libaeron`) with a st
 | 1 | Project Bootstrap | Completed | Package skeleton + CI + lint/test commands working |
 | 2 | FFI Foundation | Completed | `libaeron` load + core symbols callable |
 | 3 | Error Model | Completed | Negative returns map to typed exceptions |
-| 4 | Core Lifecycle API | Not Started | `Context` + `Client` lifecycle stable |
+| 4 | Core Lifecycle API | Completed | `Context` + `Client` lifecycle stable |
 | 5 | Pub/Sub API MVP | Not Started | Publish and receive one message in tests |
 | 6 | Callback and Polling Ergonomics | Not Started | Python handlers stable and documented |
 | 7 | Integration Matrix + Reliability | Not Started | Deterministic integration suite in CI |
@@ -139,22 +139,22 @@ Exit criteria:
 Objective: Deliver `Context` and `Client` with deterministic lifecycle behavior.
 
 Tasks:
-- [ ] Implement `Context` class:
-- [ ] Constructor allocates C context.
-- [ ] Configuration methods (`set_dir`, timeouts, invoker mode).
-- [ ] `close()`, `closed` property, idempotent semantics.
-- [ ] `__enter__/__exit__`.
-- [ ] Implement `Client` class:
-- [ ] Constructor with started client.
-- [ ] `do_work()` and optional idle helper.
-- [ ] `close()`, `is_open` semantics.
-- [ ] `client_id`, `next_correlation_id`.
-- [ ] Enforce ownership rules (context should not be reused incorrectly).
-- [ ] Add unit tests for lifecycle and close idempotency.
+- [x] Implement `Context` class:
+- [x] Constructor allocates C context.
+- [x] Configuration methods (`set_dir`, timeouts, invoker mode).
+- [x] `close()`, `closed` property, idempotent semantics.
+- [x] `__enter__/__exit__`.
+- [x] Implement `Client` class:
+- [x] Constructor with started client.
+- [x] `do_work()` and optional idle helper.
+- [x] `close()`, `is_open` semantics.
+- [x] `client_id`, `next_correlation_id`.
+- [x] Enforce ownership rules (context should not be reused incorrectly).
+- [x] Add unit tests for lifecycle and close idempotency.
 
 Exit criteria:
-- [ ] Context/client lifecycle tests pass.
-- [ ] No leaked resources in normal and error paths.
+- [x] Context/client lifecycle tests pass.
+- [x] No leaked resources in normal and error paths.
 
 ## Phase 5: Pub/Sub API MVP
 Objective: Implement first end-to-end messaging flow with idiomatic wrappers.
@@ -285,6 +285,9 @@ Use this section for implementation updates.
 - 2026-03-01: Completed Phase 3 error model with typed exception hierarchy and helpers (`check_rc`, `check_position`, `last_error_message`).
 - 2026-03-01: Added error mapping tests in `tests/unit/test_errors.py`.
 - 2026-03-01: Verified locally in `.venv` with `make check`; integration tests passed with `libaeron` available.
+- 2026-03-01: Completed Phase 4 core lifecycle API with C-backed `Context` and `Client`.
+- 2026-03-01: Added integration lifecycle coverage in `tests/integration/test_client_lifecycle.py`.
+- 2026-03-01: Verified locally in `.venv` with `make check` (unit + integration).
 
 ## Immediate Next Steps
 - [x] Execute Phase 0 and produce `docs/api-contract.md`.
