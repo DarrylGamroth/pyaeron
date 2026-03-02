@@ -24,7 +24,7 @@ def _offer_and_poll_once(client: Client, channel: str, stream_id: int) -> None:
         _await_connected(pub, sub, timeout=5.0)
 
         payload = b"hello pyaeron phase5"
-        position = pub.offer(payload)
+        position = pub.offer_with_retry(payload, timeout=5.0, poll_interval=0.0005)
         assert position > 0
 
         received: list[bytes] = []
@@ -34,10 +34,14 @@ def _offer_and_poll_once(client: Client, channel: str, stream_id: int) -> None:
             received.append(bytes(fragment))
             received_stream_ids.append(header.stream_id)
 
-        deadline = time.monotonic() + 5.0
-        while time.monotonic() < deadline and not received:
-            sub.poll(on_fragment, fragment_limit=10)
-            time.sleep(0.001)
+        sub.poll_until(
+            on_fragment,
+            fragment_limit=10,
+            min_fragments=1,
+            timeout=5.0,
+            poll_interval=0.001,
+            copy_payload=True,
+        )
 
         assert received == [payload]
         assert received_stream_ids == [stream_id]
@@ -70,4 +74,3 @@ def test_pubsub_udp_mvp() -> None:
             _offer_and_poll_once(client, "aeron:udp?endpoint=localhost:20121", 3002)
     except TimedOutError as exc:
         pytest.skip(f"media driver/runtime unavailable for UDP test: {exc}")
-

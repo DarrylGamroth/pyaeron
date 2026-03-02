@@ -2,10 +2,11 @@ from __future__ import annotations
 
 import struct
 import sys
+import time
 from typing import Any
 
-from .errors import check_rc
-from .handlers import FragmentHandler
+from .errors import TimedOutError, check_rc
+from .handlers import FragmentCallbackAdapter, FragmentHandler
 from .types import Header
 from .util import ensure_open
 
@@ -28,6 +29,7 @@ class Subscription:
         self.channel = channel
         self.stream_id = stream_id
         self._closed = False
+        self._active_fragment_callback: Any = None
 
     @property
     def pointer(self) -> Any:
@@ -115,19 +117,54 @@ class Subscription:
             except BaseException as exc:  # noqa: BLE001
                 pending_exc = exc
 
-        num_fragments = int(
-            check_rc(
-                self._capi.lib.aeron_subscription_poll(
-                    self._ptr,
-                    on_fragment,
-                    self._capi.ffi.NULL,
-                    fragment_limit,
-                ),
-                capi=self._capi,
+        # Retain callback reference for the lifetime of the native poll call.
+        self._active_fragment_callback = on_fragment
+        try:
+            num_fragments = int(
+                check_rc(
+                    self._capi.lib.aeron_subscription_poll(
+                        self._ptr,
+                        on_fragment,
+                        self._capi.ffi.NULL,
+                        fragment_limit,
+                    ),
+                    capi=self._capi,
+                )
             )
-        )
+        finally:
+            self._active_fragment_callback = None
 
         if pending_exc is not None:
             raise pending_exc
 
         return num_fragments
+
+    def poll_until(
+        self,
+        handler: FragmentHandler,
+        *,
+        fragment_limit: int = 10,
+        min_fragments: int = 1,
+        timeout: float = 5.0,
+        poll_interval: float = 0.001,
+        copy_payload: bool = False,
+    ) -> int:
+        """Poll repeatedly until `min_fragments` are consumed or timeout is reached."""
+        if min_fragments <= 0:
+            raise ValueError("min_fragments must be greater than zero")
+
+        adapter = FragmentCallbackAdapter(handler, copy_payload=copy_payload)
+        deadline = time.monotonic() + timeout
+        total = 0
+        while total < min_fragments:
+            total += self.poll(adapter, fragment_limit=fragment_limit)
+            if total >= min_fragments:
+                return total
+            if time.monotonic() >= deadline:
+                raise TimedOutError(
+                    "Timed out polling subscription "
+                    f"channel={self.channel!r} stream_id={self.stream_id}"
+                )
+            if poll_interval > 0:
+                time.sleep(poll_interval)
+        return total

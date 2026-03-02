@@ -1,8 +1,15 @@
 from __future__ import annotations
 
+import time
 from typing import Any
 
-from .errors import check_position, check_rc
+from .errors import (
+    AdminActionError,
+    BackPressuredError,
+    NotConnectedError,
+    check_position,
+    check_rc,
+)
 from .util import ensure_open
 
 BufferLike = bytes | bytearray | memoryview
@@ -71,3 +78,25 @@ class Publication:
             self._capi.ffi.NULL,
         )
         return int(check_position(int(rc), capi=self._capi))
+
+    def offer_with_retry(
+        self,
+        data: BufferLike,
+        *,
+        timeout: float = 5.0,
+        poll_interval: float = 0.0005,
+    ) -> int:
+        """Offer with retry on transient publication states.
+
+        Retries when Aeron indicates `NOT_CONNECTED`, `BACK_PRESSURED`, or `ADMIN_ACTION`.
+        Raises the original typed exception for non-transient failures or on timeout.
+        """
+        deadline = time.monotonic() + timeout
+        while True:
+            try:
+                return self.offer(data)
+            except (NotConnectedError, BackPressuredError, AdminActionError):
+                if time.monotonic() >= deadline:
+                    raise
+                if poll_interval > 0:
+                    time.sleep(poll_interval)

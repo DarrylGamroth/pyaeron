@@ -25,6 +25,7 @@ from .errors import (
     check_rc,
     last_error_message,
 )
+from .handlers import FragmentCallbackAdapter, copy_fragment
 from .publication import Publication
 from .subscription import Subscription
 from .types import Header
@@ -45,6 +46,7 @@ __all__ = [
     "ConductorServiceTimeoutError",
     "Context",
     "DriverTimeoutError",
+    "FragmentCallbackAdapter",
     "Header",
     "IllegalStateError",
     "last_error_message",
@@ -58,4 +60,5 @@ __all__ = [
     "Subscription",
     "TimedOutError",
     "UnsupportedAeronVersionError",
+    "copy_fragment",
 ]
