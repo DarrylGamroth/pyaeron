@@ -1,7 +1,7 @@
 # pyaeron Implementation Plan
 
 Last updated: 2026-03-01
-Status: Phase 6 complete
+Status: Phase 7 complete
 
 ## Purpose
 Create an idiomatic Python wrapper for the Aeron C client (`libaeron`) with a stable, Python-first API, strong lifecycle management, robust error handling, and production-ready tests.
@@ -57,7 +57,7 @@ Create an idiomatic Python wrapper for the Aeron C client (`libaeron`) with a st
 | 4 | Core Lifecycle API | Completed | `Context` + `Client` lifecycle stable |
 | 5 | Pub/Sub API MVP | Completed | Publish and receive one message in tests |
 | 6 | Callback and Polling Ergonomics | Completed | Python handlers stable and documented |
-| 7 | Integration Matrix + Reliability | Not Started | Deterministic integration suite in CI |
+| 7 | Integration Matrix + Reliability | Completed | Deterministic integration suite in CI |
 | 8 | Advanced Features | Not Started | Exclusive pub/counters/image extras shipped |
 | 9 | Docs + Release | Not Started | Versioned release with examples and migration notes |
 
@@ -201,20 +201,20 @@ Exit criteria:
 Objective: Make integration tests deterministic and actionable.
 
 Tasks:
-- [ ] Test harness for launching media driver process (or embedded strategy if available).
-- [ ] Deterministic setup/teardown and temp `aeron.dir` management.
-- [ ] Matrix:
-- [ ] IPC and UDP channel variants.
-- [ ] Invoker mode on/off.
-- [ ] Multi-message and backpressure scenarios.
-- [ ] Retry/wait helpers with clear timeout diagnostics.
-- [ ] CI gating strategy:
-- [ ] fast checks on PR
-- [ ] extended integration nightly/on-demand
+- [x] Test harness for launching media driver process (or embedded strategy if available).
+- [x] Deterministic setup/teardown and temp `aeron.dir` management.
+- [x] Matrix:
+- [x] IPC and UDP channel variants.
+- [x] Invoker mode on/off.
+- [x] Multi-message and backpressure scenarios.
+- [x] Retry/wait helpers with clear timeout diagnostics.
+- [x] CI gating strategy:
+- [x] fast checks on PR
+- [x] extended integration nightly/on-demand
 
 Exit criteria:
-- [ ] Flaky test rate below agreed threshold.
-- [ ] CI failures provide actionable diagnostics.
+- [x] Flaky test rate below agreed threshold.
+- [x] CI failures provide actionable diagnostics.
 
 ## Phase 8: Advanced Features
 Objective: Expand API after MVP is stable.
@@ -294,6 +294,10 @@ Use this section for implementation updates.
 - 2026-03-01: Completed Phase 6 callback ergonomics with adapters/copy helpers and timeout-aware polling helpers.
 - 2026-03-01: Added `docs/callbacks.md` and unit coverage in `tests/unit/test_handlers.py`.
 - 2026-03-01: Verified locally in `.venv` with `make check` (unit + integration).
+- 2026-03-01: Completed Phase 7 deterministic integration harness in `tests/integration/conftest.py` and `tests/integration/support.py`.
+- 2026-03-01: Added integration matrix coverage (`ipc`/`udp`, invoker on/off, multi-message, retry behavior) in `tests/integration/test_pubsub_matrix.py`.
+- 2026-03-01: Added CI lanes for fast PR integration and extended scheduled/on-demand integration in `.github/workflows/ci.yml`.
+- 2026-03-01: Verified locally in `.venv` with `make check` (all tests passing).
 
 ## Immediate Next Steps
 - [x] Execute Phase 0 and produce `docs/api-contract.md`.
