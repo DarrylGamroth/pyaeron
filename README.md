@@ -7,6 +7,7 @@ Current version: `0.1.0`
 
 Implemented:
 - Context and client lifecycle wrappers (`Context`, `Client`)
+- Embedded media driver wrappers (`MediaDriverContext`, `MediaDriver`)
 - Publication/subscription APIs (`Publication`, `Subscription`)
 - Callback ergonomics (`FragmentCallbackAdapter`, `Subscription.poll_until`)
 - Advanced APIs: `ExclusivePublication`, `BufferClaim`, destination add/remove, counters, image metadata, and CnC access
@@ -104,6 +105,8 @@ Runnable examples are in `examples/`:
 - `examples/invoker_mode_pubsub.py`
 - `examples/try_claim_publisher.py`
 - `examples/counters_demo.py`
+- `examples/try_claim_publisher.py`
+- `examples/counters_demo.py`
 
 ## Development Commands
 ```bash
@@ -128,5 +131,6 @@ Default header path is `../aeron/aeron-client/src/main/c/aeronc.h`.
 - Callback notes: `docs/callbacks.md`
 - Integration strategy: `docs/integration.md`
 - Advanced features: `docs/advanced.md`
+- Embedded media driver: `docs/embedded-driver.md`
 - Troubleshooting: `docs/troubleshooting.md`
 - Versioning and release policy: `docs/versioning.md`

@@ -46,3 +46,7 @@ def _default_libaeron_path() -> None:
         candidate = "/opt/aeron/lib/libaeron.so"
         if os.path.exists(candidate):
             os.environ["AERON_LIBRARY_PATH"] = candidate
+    if "AERON_DRIVER_LIBRARY_PATH" not in os.environ:
+        candidate = "/opt/aeron/lib/libaeron_driver.so"
+        if os.path.exists(candidate):
+            os.environ["AERON_DRIVER_LIBRARY_PATH"] = candidate

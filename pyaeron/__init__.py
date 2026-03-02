@@ -4,6 +4,7 @@ from .cnc import CnC
 from .context import Context
 from .counter import Counter
 from .counters_reader import CountersReader
+from .driver import MediaDriver, MediaDriverContext, ThreadingMode
 from .errors import (
     AdminActionError,
     AeronError,
@@ -75,4 +76,7 @@ __all__ = [
     "TimedOutError",
     "UnsupportedAeronVersionError",
     "copy_fragment",
+    "MediaDriver",
+    "MediaDriverContext",
+    "ThreadingMode",
 ]

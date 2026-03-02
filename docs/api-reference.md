@@ -30,6 +30,33 @@ This document lists the public `pyaeron` API as of `0.1.0`.
 - `Client.add_counter(type_id, label, key=b"", ...) -> Counter`
 - `Client.counters_reader -> CountersReader`
 
+## Embedded Media Driver
+
+### `ThreadingMode`
+- `ThreadingMode.DEDICATED`
+- `ThreadingMode.SHARED_NETWORK`
+- `ThreadingMode.SHARED`
+- `ThreadingMode.INVOKER`
+
+### `MediaDriverContext`
+- `MediaDriverContext(...)`
+- `MediaDriverContext.close() -> None`
+- `MediaDriverContext.closed -> bool`
+- `MediaDriverContext.aeron_dir -> str | None`
+- `MediaDriverContext.dir_delete_on_start -> bool`
+- `MediaDriverContext.dir_delete_on_shutdown -> bool`
+- `MediaDriverContext.threading_mode -> ThreadingMode`
+
+### `MediaDriver`
+- `MediaDriver(context: MediaDriverContext, manual_main_loop=False)`
+- `MediaDriver.launch_embedded(...) -> MediaDriver`
+- `MediaDriver.close() -> None`
+- `MediaDriver.is_open -> bool`
+- `MediaDriver.aeron_dir -> str | None`
+- `MediaDriver.context -> MediaDriverContext`
+- `MediaDriver.do_work() -> int`
+- `MediaDriver.idle_strategy(work_count) -> None`
+
 ## Publish APIs
 
 ### `Publication`

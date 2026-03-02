@@ -1,7 +1,7 @@
 # pyaeron Implementation Plan
 
 Last updated: 2026-03-02
-Status: Phase 9 complete
+Status: Phase 10 complete
 
 ## Purpose
 Create an idiomatic Python wrapper for the Aeron C client (`libaeron`) with a stable, Python-first API, strong lifecycle management, robust error handling, and production-ready tests.
@@ -60,6 +60,7 @@ Create an idiomatic Python wrapper for the Aeron C client (`libaeron`) with a st
 | 7 | Integration Matrix + Reliability | Completed | Deterministic integration suite in CI |
 | 8 | Advanced Features | Completed | Exclusive pub/counters/image extras shipped |
 | 9 | Docs + Release | Completed | Versioned release with examples and migration notes |
+| 10 | Embedded Media Driver | Completed | In-process driver lifecycle wrapper with tests/docs |
 
 ## Phase 0: Discovery + API Contract
 Objective: Define what "idiomatic Python" means for this wrapper and lock the initial API contract.
@@ -257,6 +258,24 @@ Exit criteria:
 - [ ] API stability policy for pre-1.0 iterations.
 - [ ] Increase unit test coverage for core wrappers (see Coverage Improvement Plan).
 
+## Phase 10: Embedded Media Driver
+Objective: Provide an in-process Media Driver wrapper parity path with Aeron.jl.
+
+Tasks:
+- [x] Add `libaeron_driver` FFI loader (`_driver_capi.py`) with symbol validation.
+- [x] Implement `MediaDriverContext` lifecycle/configuration wrapper.
+- [x] Implement `MediaDriver` launch/start/do_work/close lifecycle wrapper.
+- [x] Implement `MediaDriver.launch_embedded(...)` convenience constructor.
+- [x] Export driver API from package root.
+- [x] Add unit coverage for embedded driver wrappers and error/state paths.
+- [x] Add integration test exercising embedded driver + client pub/sub roundtrip.
+- [x] Document usage and configuration for embedded mode.
+
+Exit criteria:
+- [x] Embedded driver launch and close are deterministic.
+- [x] Pub/sub roundtrip succeeds against embedded driver in integration tests.
+- [x] Docs describe library discovery and manual-main-loop behavior.
+
 ## Risk Register
 | Risk | Impact | Likelihood | Mitigation |
 | --- | --- | --- | --- |
@@ -345,6 +364,7 @@ Use this section for implementation updates.
 - 2026-03-02: Added `make test-unit-cov` and CI unit coverage gate on Python 3.12.
 - 2026-03-02: Expanded wrapper branch/edge-case tests further; unit-only coverage increased to ~87% and full-suite coverage to ~92%.
 - 2026-03-02: Added baseline coverage gates: `test-unit-cov` (`--cov-fail-under=86`) and `test-full-cov` (`--cov-fail-under=90`) with CI enforcement.
+- 2026-03-02: Completed Phase 10 embedded driver support with `MediaDriverContext`/`MediaDriver`, unit tests, and integration roundtrip coverage.
 
 ## Immediate Next Steps
 - [x] Execute Phase 0 and produce `docs/api-contract.md`.

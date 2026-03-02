@@ -12,3 +12,6 @@ def test_phase8_exports_present() -> None:
     assert pyaeron.CountersReader
     assert pyaeron.Image
     assert pyaeron.CnC
+    assert pyaeron.MediaDriver
+    assert pyaeron.MediaDriverContext
+    assert pyaeron.ThreadingMode
