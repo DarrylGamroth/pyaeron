@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+from dataclasses import dataclass
 
 import pytest
 
@@ -10,10 +11,25 @@ from pyaeron._capi import try_load_libaeron
 from .support import MediaDriverHarness, find_aeronmd_binary
 
 
+@dataclass(slots=True)
+class ExternalMediaDriverHarness:
+    aeron_dir: str
+
+    def close(self) -> None:
+        return None
+
+
 @pytest.fixture
-def media_driver() -> MediaDriverHarness:
+def media_driver() -> MediaDriverHarness | ExternalMediaDriverHarness:
     if try_load_libaeron() is None:
         pytest.skip("libaeron unavailable")
+
+    external_dir = os.environ.get("AERON_EXTERNAL_MEDIA_DRIVER_DIR")
+    if external_dir:
+        if not os.path.exists(os.path.join(external_dir, "cnc.dat")):
+            pytest.skip(f"AERON_EXTERNAL_MEDIA_DRIVER_DIR does not contain cnc.dat: {external_dir}")
+        yield ExternalMediaDriverHarness(aeron_dir=external_dir)
+        return
 
     binary = find_aeronmd_binary()
     if binary is None:

@@ -44,39 +44,250 @@ jobs:
         if: matrix.python-version == '3.12'
         run: make test-unit-cov
 
-      - name: Integration smoke
-        if: matrix.python-version == '3.12'
-        env:
-          AERON_LIBRARY_PATH: /opt/aeron/lib/libaeron.so
-          AERON_MD_BINARY: /opt/aeron/bin/aeronmd
-        run: make test-integration-fast
+  integration-java-driver:
+    needs: lint-type-test
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python-version: ["3.12"]
 
-      - name: Full coverage baseline gate
-        if: matrix.python-version == '3.12'
-        env:
-          AERON_LIBRARY_PATH: /opt/aeron/lib/libaeron.so
-          AERON_MD_BINARY: /opt/aeron/bin/aeronmd
-        run: make test-full-cov
-
-  integration-extended:
-    if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
-    runs-on: ubuntu-latest
     steps:
-      - name: Check out repository
+      - name: Check out pyaeron
         uses: actions/checkout@v4
+
+      - name: Check out Aeron source
+        uses: actions/checkout@v4
+        with:
+          repository: aeron-io/aeron
+          path: aeron-src
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: ${{ matrix.python-version }}
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
 
       - name: Install dependencies
         run: |
           python -m pip install -U pip
           python -m pip install -e ".[dev]"
 
+      - name: Build Aeron C libs (Linux)
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          cmake -S aeron-src -B aeron-build \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DAERON_TESTS=OFF \
+            -DAERON_INSTALL_TARGETS=ON \
+            -DCMAKE_INSTALL_PREFIX="$PWD/aeron-install"
+          cmake --build aeron-build --target install --parallel
+
+      - name: Build Aeron C libs (Windows/MSVC)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          cmake -S aeron-src -B aeron-build `
+            -DAERON_TESTS=OFF `
+            -DAERON_INSTALL_TARGETS=ON `
+            -DCMAKE_INSTALL_PREFIX="${{ github.workspace }}\\aeron-install"
+          cmake --build aeron-build --config Release --target install --parallel
+
+      - name: Download Aeron All JAR (Linux)
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          AERON_VERSION=$(cat aeron-src/version.txt)
+          curl -fsSL -o aeron-all.jar \
+            "https://repo1.maven.org/maven2/io/aeron/aeron-all/${AERON_VERSION}/aeron-all-${AERON_VERSION}.jar"
+
+      - name: Download Aeron All JAR (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $AeronVersion = Get-Content aeron-src/version.txt -Raw
+          $AeronVersion = $AeronVersion.Trim()
+          $Url = "https://repo1.maven.org/maven2/io/aeron/aeron-all/$AeronVersion/aeron-all-$AeronVersion.jar"
+          Invoke-WebRequest -Uri $Url -OutFile aeron-all.jar
+
+      - name: Start Java media driver (Linux)
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          AERON_DIR="$RUNNER_TEMP/aeron-java-driver"
+          mkdir -p "$AERON_DIR"
+
+          java -Daeron.dir="$AERON_DIR" -cp aeron-all.jar io.aeron.driver.MediaDriver \
+            > "$RUNNER_TEMP/aeron-java-driver.log" 2>&1 &
+          echo $! > "$RUNNER_TEMP/aeron-java-driver.pid"
+
+          for _ in $(seq 1 300); do
+            if [[ -f "$AERON_DIR/cnc.dat" ]]; then
+              break
+            fi
+            sleep 0.1
+          done
+
+          if [[ ! -f "$AERON_DIR/cnc.dat" ]]; then
+            echo "cnc.dat not created"
+            cat "$RUNNER_TEMP/aeron-java-driver.log" || true
+            exit 1
+          fi
+
+          echo "AERON_EXTERNAL_MEDIA_DRIVER_DIR=$AERON_DIR" >> "$GITHUB_ENV"
+          echo "AERON_LIBRARY_PATH=$PWD/aeron-install/lib/libaeron.so" >> "$GITHUB_ENV"
+          echo "AERON_DRIVER_LIBRARY_PATH=$PWD/aeron-install/lib/libaeron_driver.so" >> "$GITHUB_ENV"
+
+      - name: Start Java media driver (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $AeronDir = Join-Path $env:RUNNER_TEMP "aeron-java-driver"
+          New-Item -ItemType Directory -Force -Path $AeronDir | Out-Null
+
+          $OutLog = Join-Path $env:RUNNER_TEMP "aeron-java-driver.out.log"
+          $ErrLog = Join-Path $env:RUNNER_TEMP "aeron-java-driver.err.log"
+          $Proc = Start-Process java -ArgumentList "-Daeron.dir=$AeronDir","-cp","aeron-all.jar","io.aeron.driver.MediaDriver" -PassThru -RedirectStandardOutput $OutLog -RedirectStandardError $ErrLog
+          $PidFile = Join-Path $env:RUNNER_TEMP "aeron-java-driver.pid"
+          $Proc.Id | Set-Content $PidFile
+
+          $CncFile = Join-Path $AeronDir "cnc.dat"
+          $Ready = $false
+          for ($i = 0; $i -lt 300; $i++) {
+            if (Test-Path $CncFile) {
+              $Ready = $true
+              break
+            }
+            Start-Sleep -Milliseconds 100
+          }
+
+          if (-not $Ready) {
+            Write-Host "cnc.dat not created"
+            if (Test-Path $ErrLog) { Get-Content $ErrLog -ErrorAction SilentlyContinue }
+            exit 1
+          }
+
+          $BinDir = Join-Path $env:GITHUB_WORKSPACE "aeron-install\\bin"
+          Add-Content $env:GITHUB_ENV "AERON_EXTERNAL_MEDIA_DRIVER_DIR=$AeronDir"
+          Add-Content $env:GITHUB_ENV "AERON_LIBRARY_PATH=$(Join-Path $BinDir 'aeron.dll')"
+          Add-Content $env:GITHUB_ENV "AERON_DRIVER_LIBRARY_PATH=$(Join-Path $BinDir 'aeron_driver.dll')"
+          Add-Content $env:GITHUB_ENV "PATH=$BinDir;$env:PATH"
+
+      - name: Integration tests
+        run: make test-integration
+
+      - name: Full coverage baseline gate
+        if: runner.os == 'Linux'
+        run: make test-full-cov
+
+      - name: Stop Java media driver (Linux)
+        if: always() && runner.os == 'Linux'
+        shell: bash
+        run: |
+          PID_FILE="$RUNNER_TEMP/aeron-java-driver.pid"
+          if [[ -f "$PID_FILE" ]]; then
+            PID=$(cat "$PID_FILE")
+            kill "$PID" || true
+          fi
+
+      - name: Stop Java media driver (Windows)
+        if: always() && runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $PidFile = Join-Path $env:RUNNER_TEMP "aeron-java-driver.pid"
+          if (Test-Path $PidFile) {
+            $Pid = Get-Content $PidFile -Raw
+            if ($Pid) {
+              Stop-Process -Id ([int]$Pid) -ErrorAction SilentlyContinue
+            }
+          }
+
+  integration-extended:
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
+    needs: lint-type-test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out pyaeron
+        uses: actions/checkout@v4
+
+      - name: Check out Aeron source
+        uses: actions/checkout@v4
+        with:
+          repository: aeron-io/aeron
+          path: aeron-src
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install -U pip
+          python -m pip install -e ".[dev]"
+
+      - name: Build Aeron C libs
+        run: |
+          cmake -S aeron-src -B aeron-build \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DAERON_TESTS=OFF \
+            -DAERON_INSTALL_TARGETS=ON \
+            -DCMAKE_INSTALL_PREFIX="$PWD/aeron-install"
+          cmake --build aeron-build --target install --parallel
+
+      - name: Download Aeron All JAR
+        run: |
+          AERON_VERSION=$(cat aeron-src/version.txt)
+          curl -fsSL -o aeron-all.jar \
+            "https://repo1.maven.org/maven2/io/aeron/aeron-all/${AERON_VERSION}/aeron-all-${AERON_VERSION}.jar"
+
+      - name: Start Java media driver
+        run: |
+          AERON_DIR="$RUNNER_TEMP/aeron-java-driver"
+          mkdir -p "$AERON_DIR"
+
+          java -Daeron.dir="$AERON_DIR" -cp aeron-all.jar io.aeron.driver.MediaDriver \
+            > "$RUNNER_TEMP/aeron-java-driver.log" 2>&1 &
+          echo $! > "$RUNNER_TEMP/aeron-java-driver.pid"
+
+          for _ in $(seq 1 300); do
+            if [[ -f "$AERON_DIR/cnc.dat" ]]; then
+              break
+            fi
+            sleep 0.1
+          done
+
+          if [[ ! -f "$AERON_DIR/cnc.dat" ]]; then
+            echo "cnc.dat not created"
+            cat "$RUNNER_TEMP/aeron-java-driver.log" || true
+            exit 1
+          fi
+
+          echo "AERON_EXTERNAL_MEDIA_DRIVER_DIR=$AERON_DIR" >> "$GITHUB_ENV"
+          echo "AERON_LIBRARY_PATH=$PWD/aeron-install/lib/libaeron.so" >> "$GITHUB_ENV"
+          echo "AERON_DRIVER_LIBRARY_PATH=$PWD/aeron-install/lib/libaeron_driver.so" >> "$GITHUB_ENV"
+
       - name: Extended integration matrix
-        env:
-          AERON_LIBRARY_PATH: /opt/aeron/lib/libaeron.so
-          AERON_MD_BINARY: /opt/aeron/bin/aeronmd
         run: make test-integration-extended
+
+      - name: Stop Java media driver
+        if: always()
+        run: |
+          PID_FILE="$RUNNER_TEMP/aeron-java-driver.pid"
+          if [[ -f "$PID_FILE" ]]; then
+            PID=$(cat "$PID_FILE")
+            kill "$PID" || true
+          fi
