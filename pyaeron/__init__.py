@@ -2,11 +2,28 @@ from ._version import __version__
 from .client import Client
 from .context import Context
 from .errors import (
+    AdminActionError,
     AeronError,
+    AeronIOError,
     AeronStateError,
+    AeronTimeoutError,
+    BackPressuredError,
+    BufferFullError,
+    ClientTimeoutError,
+    ConductorServiceTimeoutError,
+    DriverTimeoutError,
+    IllegalStateError,
     LibraryLoadError,
+    MaxPositionExceededError,
+    NotConnectedError,
+    PublicationClosedError,
+    PublicationOfferError,
     ResourceClosedError,
+    TimedOutError,
     UnsupportedAeronVersionError,
+    check_position,
+    check_rc,
+    last_error_message,
 )
 from .publication import Publication
 from .subscription import Subscription
@@ -14,15 +31,31 @@ from .types import Header
 
 __all__ = [
     "__version__",
+    "AdminActionError",
     "AeronError",
+    "AeronIOError",
     "AeronStateError",
+    "AeronTimeoutError",
+    "BackPressuredError",
+    "BufferFullError",
+    "check_position",
+    "check_rc",
+    "ClientTimeoutError",
     "Client",
+    "ConductorServiceTimeoutError",
     "Context",
+    "DriverTimeoutError",
     "Header",
+    "IllegalStateError",
+    "last_error_message",
     "LibraryLoadError",
+    "MaxPositionExceededError",
+    "NotConnectedError",
     "Publication",
+    "PublicationClosedError",
+    "PublicationOfferError",
     "ResourceClosedError",
     "Subscription",
+    "TimedOutError",
     "UnsupportedAeronVersionError",
 ]
-
