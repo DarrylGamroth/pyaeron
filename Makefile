@@ -1,7 +1,7 @@
 PYTHON ?= python3
 PIP ?= $(PYTHON) -m pip
 
-.PHONY: install-dev lint format typecheck test test-integration test-integration-fast test-integration-extended generate-cdef check
+.PHONY: install-dev lint format typecheck test test-integration test-integration-fast test-integration-extended generate-cdef build check
 
 install-dev:
 	$(PIP) install -U pip
@@ -30,5 +30,8 @@ test-integration-extended:
 
 generate-cdef:
 	$(PYTHON) scripts/generate_cdef.py
+
+build:
+	$(PYTHON) -m build
 
 check: lint typecheck test test-integration

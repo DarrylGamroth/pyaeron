@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "pyaeron"
-version = "0.1.0a1"
+version = "0.1.0"
 description = "Idiomatic Python wrapper for the Aeron C client"
 readme = "README.md"
 requires-python = ">=3.10"

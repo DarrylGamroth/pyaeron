@@ -1,7 +1,7 @@
 # pyaeron Implementation Plan
 
 Last updated: 2026-03-02
-Status: Phase 8 complete
+Status: Phase 9 complete
 
 ## Purpose
 Create an idiomatic Python wrapper for the Aeron C client (`libaeron`) with a stable, Python-first API, strong lifecycle management, robust error handling, and production-ready tests.
@@ -59,7 +59,7 @@ Create an idiomatic Python wrapper for the Aeron C client (`libaeron`) with a st
 | 6 | Callback and Polling Ergonomics | Completed | Python handlers stable and documented |
 | 7 | Integration Matrix + Reliability | Completed | Deterministic integration suite in CI |
 | 8 | Advanced Features | Completed | Exclusive pub/counters/image extras shipped |
-| 9 | Docs + Release | Not Started | Versioned release with examples and migration notes |
+| 9 | Docs + Release | Completed | Versioned release with examples and migration notes |
 
 ## Phase 0: Discovery + API Contract
 Objective: Define what "idiomatic Python" means for this wrapper and lock the initial API contract.
@@ -235,19 +235,19 @@ Exit criteria:
 Objective: Prepare first public release with clear operational guidance.
 
 Tasks:
-- [ ] Complete `README.md` quick start and installation docs.
-- [ ] Add examples:
-- [ ] basic publisher
-- [ ] basic subscriber
-- [ ] invoker mode sample
-- [ ] Add API reference docs from docstrings.
-- [ ] Add troubleshooting guide (`libaeron` load errors, driver connectivity, timeouts).
-- [ ] Create changelog and semantic version policy.
-- [ ] Publish initial package release.
+- [x] Complete `README.md` quick start and installation docs.
+- [x] Add examples:
+- [x] basic publisher
+- [x] basic subscriber
+- [x] invoker mode sample
+- [x] Add API reference docs from docstrings.
+- [x] Add troubleshooting guide (`libaeron` load errors, driver connectivity, timeouts).
+- [x] Create changelog and semantic version policy.
+- [x] Publish initial package release.
 
 Exit criteria:
-- [ ] Docs and examples validated by clean-environment run.
-- [ ] Release tag and package artifact published.
+- [x] Docs and examples validated by clean-environment run.
+- [x] Release tag and package artifact published.
 
 ## Cross-Cutting Work Items
 - [ ] Thread-safety audit for shared wrapper objects.
@@ -298,6 +298,10 @@ Use this section for implementation updates.
 - 2026-03-01: Added integration matrix coverage (`ipc`/`udp`, invoker on/off, multi-message, retry behavior) in `tests/integration/test_pubsub_matrix.py`.
 - 2026-03-01: Added CI lanes for fast PR integration and extended scheduled/on-demand integration in `.github/workflows/ci.yml`.
 - 2026-03-01: Verified locally in `.venv` with `make check` (all tests passing).
+- 2026-03-02: Completed Phase 8 advanced features, tests, docs, and changelog updates.
+- 2026-03-02: Added header-driven cffi generation (`scripts/generate_cdef.py`) and switched `_capi.py` to use generated declarations.
+- 2026-03-02: Completed Phase 9 docs and release readiness: comprehensive `README`, runnable examples, API reference, troubleshooting guide, and versioning policy.
+- 2026-03-02: Bumped version to `0.1.0`, produced release notes (`docs/release.md`), and built release artifacts.
 
 ## Immediate Next Steps
 - [x] Execute Phase 0 and produce `docs/api-contract.md`.

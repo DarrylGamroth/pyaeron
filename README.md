@@ -3,46 +3,128 @@
 `pyaeron` is an idiomatic Python wrapper around the Aeron C client (`libaeron`).
 
 ## Status
-Phase 8 advanced wrapper APIs are complete:
-- project packaging and tooling are configured
-- package/module skeleton is in place
-- `cffi`-based Aeron C API loader and symbol bindings are implemented
-- typed Aeron error model (`check_rc`, `check_position`, code-to-exception mapping) is implemented
-- `Context` and `Client` lifecycle APIs are stable
-- pub/sub APIs are implemented for publication/subscription add, offer, and poll
-- callback ergonomics are implemented (`FragmentCallbackAdapter`, `Subscription.poll_until`)
-- integration harness is deterministic with per-test media-driver isolation
-- advanced APIs are implemented: exclusive publication, buffer claim, destinations, counters, images, and CnC helpers
+Current version: `0.1.0`
 
-## Quick Start (Development)
+Implemented:
+- Context and client lifecycle wrappers (`Context`, `Client`)
+- Publication/subscription APIs (`Publication`, `Subscription`)
+- Callback ergonomics (`FragmentCallbackAdapter`, `Subscription.poll_until`)
+- Advanced APIs: `ExclusivePublication`, `BufferClaim`, destination add/remove, counters, image metadata, and CnC access
+- Unit and integration test coverage (IPC + UDP, invoker on/off)
+
+## Requirements
+- Python `>=3.10`
+- A compatible `libaeron` already installed on the target machine
+- Aeron Media Driver (`aeronmd`) running for publish/subscribe flows
+
+## Installation
+From PyPI:
+
+```bash
+python -m pip install pyaeron
+```
+
+From source:
+
+```bash
+git clone <repo-url>
+cd pyaeron
+python -m pip install -e .
+```
+
+Development setup:
+
 ```bash
 python -m pip install -U pip
 python -m pip install -e ".[dev]"
+```
+
+## Library Discovery
+`pyaeron` tries to load Aeron in this order:
+1. `AERON_LIBRARY_PATH`
+2. System loader resolution (`find_library`)
+3. Common library names (`libaeron.so`, `libaeron.dylib`, `aeron.dll`)
+
+Linux example:
+
+```bash
+export AERON_LIBRARY_PATH=/opt/aeron/lib/libaeron.so
+```
+
+Windows PowerShell example:
+
+```powershell
+$env:AERON_LIBRARY_PATH = "C:\\aeron\\lib\\aeron.dll"
+```
+
+## Quick Start
+Publisher:
+
+```python
+from pyaeron import Client, Context
+
+channel = "aeron:ipc"
+stream_id = 1001
+
+with Context() as ctx:
+    with Client(ctx) as client:
+        pub = client.add_publication(channel, stream_id)
+        try:
+            pub.offer_with_retry(b"hello")
+        finally:
+            pub.close()
+```
+
+Subscriber:
+
+```python
+from pyaeron import Client, Context
+
+channel = "aeron:ipc"
+stream_id = 1001
+
+received = []
+
+def on_fragment(fragment, header):
+    received.append((bytes(fragment), header.session_id))
+
+with Context() as ctx:
+    with Client(ctx) as client:
+        sub = client.add_subscription(channel, stream_id)
+        try:
+            sub.poll_until(on_fragment, min_fragments=1, timeout=5.0, copy_payload=True)
+        finally:
+            sub.close()
+```
+
+## Examples
+Runnable examples are in `examples/`:
+- `examples/basic_publisher.py`
+- `examples/basic_subscriber.py`
+- `examples/invoker_mode_pubsub.py`
+
+## Development Commands
+```bash
+make lint
+make typecheck
+make test
+make test-integration
 make check
 ```
 
-## Regenerating C Declarations
-`pyaeron` uses generated `cffi` declarations sourced from Aeron's `aeronc.h`.
+Generate cffi declarations from Aeron header:
 
 ```bash
 make generate-cdef
 ```
 
-By default this reads `../aeron/aeron-client/src/main/c/aeronc.h`. You can override paths with:
+Default header path is `../aeron/aeron-client/src/main/c/aeronc.h`.
 
-```bash
-python scripts/generate_cdef.py --header /path/to/aeronc.h --output pyaeron/_generated_cdef.py
-```
-
-## Repository Layout
-- `pyaeron/`: package source
-- `tests/`: unit and integration-smoke tests
-- `docs/`: design and implementation documents
-- `scripts/`: helper scripts
-
-## Planning Docs
-- Implementation tracker: `IMPLEMENTATION_PLAN.md`
+## Documentation
 - API contract: `docs/api-contract.md`
-- Callback/lifetime semantics: `docs/callbacks.md`
+- API reference: `docs/api-reference.md`
+- Callback notes: `docs/callbacks.md`
 - Integration strategy: `docs/integration.md`
-- Advanced feature guide: `docs/advanced.md`
+- Advanced features: `docs/advanced.md`
+- Troubleshooting: `docs/troubleshooting.md`
+- Versioning and release policy: `docs/versioning.md`
