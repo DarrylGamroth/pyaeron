@@ -12,6 +12,7 @@ on:
 env:
   JAVA_VERSION: "17"
   AERON_VERSION: "1.50.0"
+  AERON_JAVA_OPTS: "--add-opens=java.base/jdk.internal.misc=ALL-UNNAMED"
 
 jobs:
   lint-type-test:
@@ -126,7 +127,7 @@ jobs:
           AERON_DIR="$RUNNER_TEMP/aeron-java-driver"
           mkdir -p "$AERON_DIR"
 
-          java -Daeron.dir="$AERON_DIR" -cp aeron-all.jar io.aeron.driver.MediaDriver \
+          java ${AERON_JAVA_OPTS} -Daeron.dir="$AERON_DIR" -cp aeron-all.jar io.aeron.driver.MediaDriver \
             > "$RUNNER_TEMP/aeron-java-driver.log" 2>&1 &
           echo $! > "$RUNNER_TEMP/aeron-java-driver.pid"
 
@@ -156,7 +157,7 @@ jobs:
 
           $OutLog = Join-Path $env:RUNNER_TEMP "aeron-java-driver.out.log"
           $ErrLog = Join-Path $env:RUNNER_TEMP "aeron-java-driver.err.log"
-          $Proc = Start-Process java -ArgumentList "-Daeron.dir=$AeronDir","-cp","aeron-all.jar","io.aeron.driver.MediaDriver" -PassThru -RedirectStandardOutput $OutLog -RedirectStandardError $ErrLog
+          $Proc = Start-Process java -ArgumentList "${{ env.AERON_JAVA_OPTS }}","-Daeron.dir=$AeronDir","-cp","aeron-all.jar","io.aeron.driver.MediaDriver" -PassThru -RedirectStandardOutput $OutLog -RedirectStandardError $ErrLog
           $PidFile = Join-Path $env:RUNNER_TEMP "aeron-java-driver.pid"
           $Proc.Id | Set-Content $PidFile
 
@@ -206,7 +207,8 @@ jobs:
           $PidFile = Join-Path $env:RUNNER_TEMP "aeron-java-driver.pid"
           if (Test-Path $PidFile) {
             $Pid = Get-Content $PidFile -Raw
-            if ($Pid) {
+            $Pid = $Pid.Trim()
+            if ($Pid -match '^[0-9]+$') {
               Stop-Process -Id ([int]$Pid) -ErrorAction SilentlyContinue
             }
           }
@@ -261,7 +263,7 @@ jobs:
           AERON_DIR="$RUNNER_TEMP/aeron-java-driver"
           mkdir -p "$AERON_DIR"
 
-          java -Daeron.dir="$AERON_DIR" -cp aeron-all.jar io.aeron.driver.MediaDriver \
+          java ${AERON_JAVA_OPTS} -Daeron.dir="$AERON_DIR" -cp aeron-all.jar io.aeron.driver.MediaDriver \
             > "$RUNNER_TEMP/aeron-java-driver.log" 2>&1 &
           echo $! > "$RUNNER_TEMP/aeron-java-driver.pid"
 
